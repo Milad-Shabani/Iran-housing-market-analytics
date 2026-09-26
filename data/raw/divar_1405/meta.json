@@ -1,8 +1,8 @@
 {
   "source": "Divar web map endpoint, apartment-sell, collected with scripts/collect_divar.py",
   "collected_on": "2026-09-26",
-  "raw_ads": 172178,
-  "ads_used": 170356,
+  "raw_ads": 172245,
+  "ads_used": 170427,
   "neighbourhood_tag_matches_location": 0.9992,
   "tehran_median_ppm2": 262000000.0,
   "tehran_median_ppm2_all_ads": 247000000.0,
