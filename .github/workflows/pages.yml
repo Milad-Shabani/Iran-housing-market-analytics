@@ -27,6 +27,7 @@ jobs:
         run: |
           set -e
           cp -r site "$RUNNER_TEMP/site"
+          built_from=$(git rev-parse --short HEAD)
           git config user.name "Milad Shabani"
           git config user.email "milad.shabani6515@gmail.com"
           git fetch origin gh-pages || true
@@ -41,5 +42,5 @@ jobs:
           touch .nojekyll
           git add -A
           if git diff --cached --quiet; then echo "gh-pages already up to date"; exit 0; fi
-          git commit -m "Publish dashboard from ${GITHUB_SHA::7}"
+          git commit -m "Publish dashboard from $built_from"
           git push origin gh-pages

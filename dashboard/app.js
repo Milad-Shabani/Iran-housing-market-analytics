@@ -214,7 +214,7 @@ function renderKPIs() {
       kpi(T.k_ppm2, Mv(TEHRAN_MED), unitM, FA ? `میانه‌ی آگهی‌های ۱۴۰۳ · ${nf(D.meta.tehran_listings_located)} آگهی` : `1403 listings · ${nf(D.meta.tehran_listings_located)} ads`, { hero: true }),
       kpi(T.k_vsn, mult(TEHRAN_MED / NAT_MED, 1), '', FA ? `میانه‌ی کشور: ${Mv(NAT_MED)} ${unitM}` : `national median: ${Mv(NAT_MED)} ${unitM}`),
       kpi(T.k_price, Bv(TEH_CITY.pm), unitB, FA ? `متراژ معمول ${nf(TEH_CITY.sz)} متر` : `typical size ${nf(TEH_CITY.sz)} m²`),
-      LIVE ? kpi(liveLabel(), Mv(LIVE.tehran_median_ppm2), unitM, h('span', {}, [deltaSpan(LIVE.tehran_median_ppm2 / TEH_CITY.p - 1), FA ? ' نسبت به ۱۴۰۳' : ' vs 1403']))
+      LIVE ? kpi(liveLabel(), Mv(LIVE.tehran_median_ppm2), unitM, h('span', {}, [deltaSpan(LIVE.tehran_median_ppm2 / TEHRAN_MED - 1), FA ? ` نسبت به ۱۴۰۳ · ${nf(LIVE.ads_used)} آگهی` : ` vs 1403 · ${nf(LIVE.ads_used)} ads`]), { info: FA ? 'میانه‌ی آگهی‌های فروش آپارتمان که همین حالا روی نقشه‌ی دیوار است، به همان روش عدد ۱۴۰۳ (میانه‌ی وزنی میانه‌ی محله‌ها). هر هفته خودکار به‌روز می‌شود.' : 'Median of the apartment-sale ads on Divar\'s map at collection time, computed the same way as the 1403 figure (listing-weighted median of neighbourhood medians). Refreshed weekly.' })
            : kpi(T.k_growth, mult(TEHRAN_MED / D.meta.tehran_median_2021), '', FA ? `از ${Mv(D.meta.tehran_median_2021)} در حدود ۱۴۰۰` : `from ${Mv(D.meta.tehran_median_2021)} M c. 1400`),
       ...common];
   } else if (sc.type === 'district') {
@@ -276,7 +276,14 @@ if (D.meta.has_1405) {   // optional live layer from scripts/collect_divar.py
   T_METRICS.g5 = { label: T.m_g5, ramp: 'orange', fmt: v => mult(v), legend: v => mult(v, 2), hood: false };
 }
 const LIVE = D.meta.divar_1405 || null;
-const liveLabel = () => LIVE ? (FA ? `دیوار ۱۴۰۵ (${LIVE.collected_on})` : `Divar 1405 (${LIVE.collected_on})`) : '';
+const MONTH_FA = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+const liveDate = () => {
+  if (!LIVE) return '';
+  const j = LIVE.collected_on_jalali;
+  if (FA) return j ? `${nf(j[2])} ${MONTH_FA[j[1] - 1]} ${yr(j[0])}` : LIVE.collected_on;
+  return new Date(LIVE.collected_on + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+};
+const liveLabel = () => LIVE ? (FA ? `دیوار، ${liveDate()}` : `Divar · ${liveDate()}`) : '';
 const tSvg = $('#tMap');
 tSvg.setAttribute('viewBox', `0 0 ${D.tehran.w} ${D.tehran.h}`);
 const tG = svg('g', {}, tSvg);
@@ -1013,8 +1020,10 @@ function renderPills() {
   const box = clear($('#pills'));
   const items = FA ? [
     [nf(D.meta.listings_2024_total), 'آگهی دیوار، ۴۲۰ شهر'], [nf(D.meta.tehran_listings_located), 'آگهی تهران روی نقشه'], [nf(D.meta.listings_2021), 'آگهی تک‌به‌تک برای مدل'],
+    ...(LIVE ? [[nf(LIVE.ads_used), `آگهی تازه‌ی تهران، ${liveDate()}`]] : []),
     ['۹۱', 'ماه قیمت رسمی بانک مرکزی'], ['۱۲', 'ماه شاخص کیلید'], ['۰', 'کتابخانه‌ی خارجی']]
     : [[nf(D.meta.listings_2024_total), 'Divar ads, 420 cities'], [nf(D.meta.tehran_listings_located), 'Tehran ads on the map'], [nf(D.meta.listings_2021), 'individual ads for the model'],
+      ...(LIVE ? [[nf(LIVE.ads_used), `fresh Tehran ads, ${liveDate()}`]] : []),
       ['91', 'months of Central Bank prices'], ['12', 'months of Kilid indicator'], ['0', 'external libraries']];
   items.forEach(([v, l]) => box.appendChild(h('span', { cls: 'pill' }, [h('b', { text: iso(v) }), ' ' + l])));
 }

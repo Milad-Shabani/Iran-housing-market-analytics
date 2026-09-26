@@ -328,22 +328,38 @@ def aggregate(raw_path: Path, out_dir: Path | None = None) -> None:
     dtab = ads.groupby("district").apply(summarise, include_groups=False).reset_index()
     dtab["district"] = dtab.district.astype(int)
     htab = ads.dropna(subset=["slug"]).groupby("slug").apply(summarise, include_groups=False).reset_index()
+    htab["district"] = htab.slug.map(ads.groupby("slug").district.agg(lambda d: d.mode().iat[0])).astype(int)
+    # price levels use the same method as the 1403 figures they are compared with:
+    # listing-weighted quantiles of neighbourhood medians (neighbourhoods with 10+ ads)
+    from iran_housing.market import wquantile
+    big = htab[htab.listings >= 10]
+
+    def level(h, fallback):
+        if h.empty:
+            return fallback
+        return pd.Series({c: wquantile(h.ppm2, h.listings, q)
+                          for c, q in (("ppm2", .5), ("ppm2_p25", .25), ("ppm2_p75", .75))})
+    for i, row in dtab.iterrows():
+        dtab.loc[i, ["ppm2", "ppm2_p25", "ppm2_p75"]] = level(big[big.district == row.district],
+                                                              row[["ppm2", "ppm2_p25", "ppm2_p75"]]).values
+    q = ads.price_per_m2_toman.quantile([.5, .25, .75]).to_numpy()
+    tehran = level(big, pd.Series(q, index=["ppm2", "ppm2_p25", "ppm2_p75"]))
     for t in (dtab, htab):
         t["collected_on"] = collected
     dtab.to_csv(out / "tehran_districts_1405.csv", index=False)
-    htab[htab.listings >= 10].to_csv(out / "tehran_neighbourhoods_1405.csv", index=False)
+    big.to_csv(out / "tehran_neighbourhoods_1405.csv", index=False)
     meta = {"source": "Divar web map endpoint, apartment-sell, collected with scripts/collect_divar.py",
             "collected_on": collected, "raw_ads": n0, "ads_used": int(len(ads)),
             "neighbourhood_tag_matches_location": round(tag_agreement, 4),
-            "tehran_median_ppm2": float(ads.price_per_m2_toman.median()),
+            "tehran_median_ppm2": float(tehran.ppm2),
+            "tehran_median_ppm2_all_ads": float(ads.price_per_m2_toman.median()),
+            "method": "listing-weighted median of neighbourhood medians, as for 1403",
             "note": "Asking prices; map-card prices are rounded by Divar (about ±1%)."}
     (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
     # append this collection to the running history (one row per district + Tehran)
     snap = dtab[["district", "listings", "ppm2", "ppm2_p25", "ppm2_p75"]].rename(columns={"district": "scope"})
     snap["scope"] = snap["scope"].astype(str)
-    city = pd.DataFrame([{"scope": "tehran", "listings": len(ads), "ppm2": ads.price_per_m2_toman.median(),
-                          "ppm2_p25": ads.price_per_m2_toman.quantile(.25),
-                          "ppm2_p75": ads.price_per_m2_toman.quantile(.75)}])
+    city = pd.DataFrame([{"scope": "tehran", "listings": len(ads), **tehran.to_dict()}])
     snap = pd.concat([city, snap], ignore_index=True)
     snap.insert(0, "collected_on", collected)
     hist = out / "snapshots.csv"

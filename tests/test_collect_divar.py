@@ -6,6 +6,7 @@ test fixtures, not data: they only check that parsing and aggregation are wired 
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -65,6 +66,25 @@ def test_aggregate_places_ads_in_districts(tmp_path):
     assert set(d.index) == {1, 16}
     assert d.loc[1, "ppm2"] > d.loc[16, "ppm2"]
     assert d.loc[1, "listings"] == 30
+
+
+def test_levels_match_the_1403_method(tmp_path):
+    """District and Tehran levels are listing-weighted medians of neighbourhood medians."""
+    base = {"price_toman": 40e9, "size_m2": 100, "parking": 1, "elevator": 1, "collected_on": "2026-09-26"}
+    rows = [{**base, "token": f"t{i}", "slug": "tajrish", "lat": 35.8040, "lon": 51.4294,
+             "price_per_m2_toman": 400e6 + i * 1e6} for i in range(30)]
+    rows += [{**base, "token": f"n{i}", "slug": "niavaran", "lat": 35.8177, "lon": 51.4690,
+              "price_per_m2_toman": 450e6 + i * 1e6} for i in range(12)]
+    raw = tmp_path / "raw.csv"
+    pd.DataFrame(rows).to_csv(raw, index=False)
+    C.aggregate(raw, out_dir=tmp_path / "out")
+    h = pd.read_csv(tmp_path / "out" / "tehran_neighbourhoods_1405.csv").set_index("slug")
+    d = pd.read_csv(tmp_path / "out" / "tehran_districts_1405.csv").set_index("district")
+    expected = M.wquantile(h.ppm2, h.listings, 0.5)
+    assert set(h.index) == {"tajrish", "niavaran"} and set(h.district) == {1}
+    assert d.loc[1, "ppm2"] == pytest.approx(expected)
+    meta = json.loads((tmp_path / "out" / "meta.json").read_text())
+    assert meta["tehran_median_ppm2"] == pytest.approx(expected)
 
 
 def test_live_layer_is_optional():

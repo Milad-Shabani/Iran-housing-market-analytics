@@ -45,6 +45,14 @@ def jalali_to_gregorian(jy: int, jm: int, jd: int = 1) -> date:
     return date.fromordinal(start.toordinal() + day_of_year)
 
 
+def gregorian_to_jalali(d: date) -> tuple[int, int, int]:
+    jy = d.year - 621 if d >= jalali_to_gregorian(d.year - 621, 1, 1) else d.year - 622
+    day = d.toordinal() - jalali_to_gregorian(jy, 1, 1).toordinal()   # 0-based day inside the Jalali year
+    jm = day // 31 + 1 if day < 186 else (day - 186) // 30 + 7
+    jd = day - (jm - 1) * 31 + 1 if jm <= 6 else day - 186 - (jm - 7) * 30 + 1
+    return jy, jm, jd
+
+
 def month_label(jy: int, jm: int) -> str:
     return f"{jy}/{jm:02d}"
 

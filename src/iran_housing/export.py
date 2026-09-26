@@ -3,12 +3,13 @@ from __future__ import annotations
 
 import json
 import math
+from datetime import date
 
 import numpy as np
 import pandas as pd
 
 from . import geo
-from .jalali import jalali_to_gregorian
+from .jalali import gregorian_to_jalali, jalali_to_gregorian
 from .paths import GEO, RAW
 from .timeseries import METHOD_LABELS, index_to_jalali
 from .valuation import premiums, to_browser
@@ -16,6 +17,13 @@ from .valuation import premiums, to_browser
 TEHRAN_W = 760
 IRAN_W = 760
 
+
+
+def _with_jalali(live: dict | None) -> dict | None:
+    """Add the collection date as Jalali (year, month, day) so the Persian page can print it."""
+    if not live:
+        return None
+    return {**live, "collected_on_jalali": list(gregorian_to_jalali(date.fromisoformat(live["collected_on"])))}
 
 def _r(x, nd=0):
     if x is None:
@@ -173,7 +181,7 @@ def build_dashboard_data(*, hoods, districts, provinces, cities, satellites, ser
                  "growth_corr": _r(report["growth_vs_2021_level_corr"], 3),
                  "month_min": ms["observed_listing_month_min"][:7], "month_max": ms["observed_listing_month_max"][:7],
                  "has_1405": bool(report.get("has_1405")),
-                 "divar_1405": report.get("divar_1405") or None},
+                 "divar_1405": _with_jalali(report.get("divar_1405"))},
         "tehran": tehran_block(hoods, districts),
         "iran": iran_block(provinces, cities),
         "satellites": [{"s": r.city_slug, "en": pretty(r.city_slug), "fa": _names_fa()[1].get(r.city_slug),

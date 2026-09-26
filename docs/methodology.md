@@ -129,9 +129,13 @@ Divar's `districts` filter over its bounding box, and splits any rectangle whose
 what was returned, so every ad carries the neighbourhood Divar assigns it. From each map card it keeps coordinates, the (rounded) price,
 and the chips for size, rooms, building age, parking and elevator. Aggregation applies the same
 rules as the 1403 data (20–1,000 m², robust 4-SD filter on log price per m²), assigns districts
-by point-in-polygon, keeps Divar's neighbourhood tag (falling back to the nearest 1403 centroid
-within 1.5 km only for untagged ads), writes medians, quartiles and counts, and appends one row
-per district to `snapshots.csv`, which becomes a weekly series when the refresh workflow is on. Rounded map prices move a median
+by point-in-polygon, keeps Divar's neighbourhood tag when the ad sits inside that
+neighbourhood's box (the nearest catalog centroid otherwise; in the first full collection 99.9% of
+tags agreed with the location), and writes counts, medians and quartiles. District and Tehran price
+levels are computed exactly like the 1403 figures they are compared with: the listing-weighted
+median of neighbourhood medians (neighbourhoods with 10+ ads); the plain median of all ads is kept
+in `meta.json` as `tehran_median_ppm2_all_ads`. Each run appends one row per district and one for
+Tehran to `snapshots.csv`, which becomes a weekly series when the refresh workflow is on. Rounded map prices move a median
 by well under 1%.
 
 ## 7. What this project does not do
