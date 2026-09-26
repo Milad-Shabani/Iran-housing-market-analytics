@@ -109,7 +109,7 @@ Divar app does have current listings, so the repository ships a collector for th
 `divar.ir` has to be reachable from where you run it (it is from inside Iran):
 
 ```bash
-python scripts/collect_divar.py collect      # Tehran apartment-for-sale ads, ~5-10 minutes at a polite pace
+python scripts/collect_divar.py collect      # Tehran apartment-for-sale ads, ~15 minutes (3 workers)
 python scripts/collect_divar.py aggregate    # -> data/raw/divar_1405/ (medians only)
 python scripts/run_pipeline.py && python scripts/build_dashboard.py
 ```
@@ -119,8 +119,11 @@ which returns up to 200 ads per map rectangle with size, rooms, building age, pa
 elevator flags, coordinates and a rounded price; rectangles with more ads are split until every
 ad is returned, and each ad keeps the neighbourhood Divar assigns it. Individual
 ads stay in `data/local/` (git-ignored). Only neighbourhood and district medians are written to
-`data/raw/divar_1405/`. Once they exist, the dashboard gains a *Price per m² (1405)* indicator, a
-*Change 1403 → 1405* indicator and a 1405 KPI tile. Without them the page is unchanged.
+`data/raw/divar_1405/`. With them the dashboard gains a *Price per m² (1405)* indicator, a
+*Change 1403 → 1405* indicator and a 1405 KPI tile; without them the page is unchanged.
+The first full collection (4 Mehr 1405, 26 Sep 2026) returned 172,178 ads, 170,356 of which
+passed the filters; Divar's neighbourhood tag agreed with the ad's location for 99.9% of them.
+Tehran came to 262 M toman/m², against 94.1 M in 1403 by the same method (×2.8).
 
 ### Keeping it current automatically
 
@@ -128,8 +131,8 @@ ads stay in `data/local/` (git-ignored). Only neighbourhood and district medians
 steps every Friday, appends the week's medians to `data/raw/divar_1405/snapshots.csv` (so the
 trend chart gains a Divar point each week), commits, and republishes the site. It is off until
 you add the repository variable `DATA_REFRESH = on` (Settings → Secrets and variables → Actions →
-Variables). If Divar refuses GitHub's servers, run the workflow on a self-hosted runner inside
-Iran and set `REFRESH_RUNNER = self-hosted`.
+Variables). GitHub's own servers reach Divar: the collection above ran on one in about 15 minutes.
+A self-hosted runner inside Iran (`REFRESH_RUNNER = self-hosted`) is only a fallback if that changes.
 
 ### About the earlier draft's 1405 figures
 
