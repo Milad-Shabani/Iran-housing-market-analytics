@@ -1,0 +1,421 @@
+city_slug,listings,county_en,county_fa,province_iso,lat,lon,match
+tehran,91836,Tehran,تهران,IR-23,35.7572,51.3934,name_match
+mashhad,33624,Mashhad,مشهد,IR-09,36.3467,59.8719,name_match
+karaj,26725,Karaj,کرج,IR-30,35.9463,51.0709,name_match
+isfahan,18571,Isfahan,اصفهان,IR-10,32.5691,51.8207,name_match
+shiraz,16949,Shiraz,شیراز,IR-07,29.574,52.4808,name_match
+tabriz,15305,Tabriz,تبریز,IR-03,38.1025,46.1702,name_match
+andisheh-new-town,15154,Shahriar,شهریار,IR-23,35.6077,51.0698,author_assigned
+ahvaz,11120,Ahvaz,اهواز,IR-06,31.3208,48.867,name_match
+rasht,9202,Rasht,رشت,IR-01,37.342,49.8205,name_match
+qom,8130,Qom,قم,IR-25,34.703,51.2661,name_match
+kermanshah,7886,Kermanshah,کرمانشاه,IR-05,34.2948,46.9946,name_match
+pardis-city,7801,Pardis,پردیس,IR-23,35.6819,51.7903,name_match
+chamestan,7404,Nur,نور,IR-02,36.4205,52.0393,author_assigned
+urmia,6779,Urumia,ارومیه,IR-04,37.6522,45.026,author_assigned
+nur,6755,Nur,نور,IR-02,36.4205,52.0393,name_match
+parand-city,5533,Robat Karim,رباط کریم,IR-23,35.4898,51.0193,author_assigned
+bandar-abbas,5254,Bandar-e-Abbas,بندرعباس,IR-22,27.4596,56.3083,author_assigned
+arak,5203,Arak,اراک,IR-00,34.1436,49.8806,name_match
+kerman,5041,Kerman,کرمان,IR-08,30.5136,58.0123,name_match
+ardabil,4579,Ardabil city,اردبیل,IR-24,38.286,48.1663,author_assigned
+hashtgerd-city,4515,Savojbolagh,ساوجبلاغ,IR-30,35.9825,50.8365,author_assigned
+hamedan,4403,Hamedan,همدان,IR-13,34.8359,48.7754,name_match
+mahmudabad,4202,Mahmudabad,محمودآباد,IR-02,36.7509,52.309,name_match
+eslamshahr,4151,Eslamshahr,اسلامشهر,IR-23,35.5713,51.2501,name_match
+gorgan,4015,Gorgan,گرگان,IR-27,36.7444,54.5039,name_match
+qazvin,3825,Qazvin,قزوین,IR-26,36.4555,49.9208,name_match
+zanjan,3802,Zanjan,زنجان,IR-19,36.8511,48.2467,name_match
+yazd,3710,Yazd,یزد,IR-21,31.8543,54.4912,name_match
+zahedan,3641,Zahedan,زاهدان,IR-11,29.6312,60.2664,name_match
+nowshahr,3583,Nowshahr,نوشهر,IR-02,36.5647,51.7107,name_match
+fardis-city,3578,Fardis,فردیس,IR-30,35.7418,50.9775,name_match
+khorramabad,3523,Khorramabad,خرم آباد,IR-15,33.3864,48.5594,name_match
+shahriar-city,3376,Shahriar,شهریار,IR-23,35.6077,51.0698,name_match
+sanandaj,3152,Sanandaj,سنندج,IR-12,35.366,46.8169,name_match
+sadra,2775,Shiraz,شیراز,IR-07,29.574,52.4808,author_assigned
+bushehr,2574,Bushehr,بوشهر,IR-18,28.9681,50.6708,name_match
+neyshabur,2492,Neyshabur,نیشابور,IR-09,36.4269,58.7657,name_match
+dezful,2384,Dezful,دزفول,IR-06,32.4853,48.746,name_match
+amol,2318,Amol,آمل,IR-02,36.2159,52.3079,name_match
+kashan,2281,Kashan,کاشان,IR-10,33.9731,51.2616,name_match
+lahijan,2263,Lahijan,لاهیجان,IR-01,37.3234,50.1566,name_match
+bojnurd,2238,Bojnurd,بجنورد,IR-28,37.6131,57.4042,name_match
+qods-city,2144,Qods,قدس,IR-23,35.7013,51.116,name_match
+shahin-shahr,2105,Shahin Shahr and Meymeh,شاهین شهر و میمه,IR-10,33.2424,51.2773,author_assigned
+saveh,2073,Saveh,ساوه,IR-00,35.0768,50.0837,name_match
+yasuj,2037,Buyerahmad,بویراحمد,IR-17,30.7588,51.3872,author_assigned
+pakdasht-city,2034,Pakdasht,پاکدشت,IR-23,35.4696,51.7561,name_match
+najafabad,2006,Najafabad,نجف آباد,IR-10,32.9044,51.1321,name_match
+borujerd,1989,Borujerd,بروجرد,IR-15,33.8649,48.7707,name_match
+bandar-anzali,1958,Bandar-e-Anzali,بندر انزلی,IR-01,37.5566,49.448,author_assigned
+damavand,1889,Damavand,دماوند,IR-23,35.6181,52.1841,name_match
+sorkhrood,1816,Mahmudabad,محمودآباد,IR-02,36.7509,52.309,author_assigned
+kish,1762,Bandar Lengeh,بندر لنگه,IR-22,26.708,54.1185,author_assigned
+tonekabon,1746,Tonekabon,تنکابن,IR-02,36.6574,50.813,name_match
+robat-karim,1661,Robat Karim,رباط کریم,IR-23,35.4898,51.0193,name_match
+semnan,1628,Semnan,سمنان,IR-20,35.1058,53.8306,name_match
+ilam,1584,Ilam,ایلام,IR-16,33.5234,46.5279,name_match
+golbahar-city,1568,Golbahar,گلبهار,IR-09,36.5658,59.1802,name_match
+abadan,1566,Abadan,آبادان,IR-06,30.1556,48.7441,name_match
+birjand,1469,Birjand,بیرجند,IR-29,33.0849,59.1462,name_match
+qarchak-city,1448,Qarchak,قرچک,IR-23,35.4116,51.5676,name_match
+varamin-city,1446,Varamin,ورامین,IR-23,35.1412,51.7489,name_match
+sirjan,1373,Sirjan,سیرجان,IR-08,29.3197,55.6477,name_match
+babolsar,1260,Babolsar,بابلسر,IR-02,36.8239,52.7007,name_match
+sabzevar,1252,Sabzevar,سبزوار,IR-09,35.9528,57.1749,name_match
+shahrekord,1178,Sharekurd,شهرکرد,IR-14,32.3051,50.8385,author_assigned
+rudehen,1130,Damavand,دماوند,IR-23,35.6181,52.1841,author_assigned
+sari,1123,Sari,ساری,IR-02,36.4932,53.1103,name_match
+mahdasht-city,1111,Karaj,کرج,IR-30,35.9463,51.0709,author_assigned
+qaem-shahr,1067,Qaem Shahr,قائم شهر,IR-02,36.4749,52.8786,name_match
+mohammad-shahr,1065,Karaj,کرج,IR-30,35.9463,51.0709,author_assigned
+dorud,1058,Dorud,دورود,IR-15,33.5183,49.1194,name_match
+izadshahr,1055,Nur,نور,IR-02,36.4205,52.0393,author_assigned
+chalus,1044,Chalus,چالوس,IR-02,36.5248,51.4024,name_match
+rafsanjan,1042,Rafsanjan,رفسنجان,IR-08,30.5726,55.8902,name_match
+ramsar,1036,Ramsar,رامسر,IR-02,36.8421,50.5873,name_match
+mohammadieh,1027,Alborz,البرز,IR-26,36.2138,50.125,author_assigned
+nasimshahr,1011,Baharestan,بهارستان,IR-23,35.5332,51.1651,author_assigned
+shahrud,997,Shahrud,شاهرود,IR-20,35.5796,55.8433,name_match
+zibakenar,975,Rasht,رشت,IR-01,37.342,49.8205,author_assigned
+someh-sara,946,Sowme'eh Sara,صومعه سرا,IR-01,37.3699,49.3455,author_assigned
+gonbad-kavus,941,Gonbad-e-Kavus,گنبد کاووس,IR-27,37.5877,55.0596,author_assigned
+golestan-baharestan,927,Baharestan,بهارستان,IR-23,35.5332,51.1651,author_assigned
+malayer,919,Malayer,ملایر,IR-13,34.3379,48.7059,name_match
+sahand,889,Osku,اسکو,IR-03,37.8554,46.1598,author_assigned
+mahshahr,858,Bandar-e-Mahshahr,بندر ماهشهر,IR-06,30.3612,49.2616,author_assigned
+nazarabad,853,Nazarabad,نظرآباد,IR-30,35.9022,50.5219,name_match
+foolad-shahr,845,Lenjan,لنجان,IR-10,32.3759,51.213,author_assigned
+langarud,830,Langarud,لنگرود,IR-01,37.1622,50.1635,name_match
+charbagh-alborz,821,Chaharbagh,چهارباغ,IR-30,35.8353,50.7606,author_assigned
+fuman,817,Fuman,فومن,IR-01,37.1561,49.1316,name_match
+bumehen,802,Pardis,پردیس,IR-23,35.6819,51.7903,author_assigned
+marvdasht-city,795,Marvdasht,مرودشت,IR-07,30.1587,52.6862,name_match
+garmdareh,783,Karaj,کرج,IR-30,35.9463,51.0709,author_assigned
+abhar,761,Abhar,ابهر,IR-19,36.1296,49.1618,name_match
+talesh,756,Talesh,طوالش,IR-01,37.9283,48.8776,name_match
+babol,755,Babol,بابل,IR-02,36.2807,52.6296,name_match
+astaneh-ashrafiyeh,751,Astaneh-ye Ashrafiyeh,آستانه اشرفیه,IR-01,37.4344,50.0551,author_assigned
+zabol,735,Zabol,زابل,IR-11,31.0535,61.5685,name_match
+shushtar,709,Shushtar,شوشتر,IR-06,31.8697,48.918,name_match
+safadasht-industrial-city,704,Malard,ملارد,IR-23,35.6019,50.6372,author_assigned
+rudsar,696,Rudsar,رودسر,IR-01,36.9579,50.3886,name_match
+behbahan,690,Behbahan,بهبهان,IR-06,30.5491,50.3016,name_match
+qeshm,690,Qeshm,قشم,IR-22,26.7078,55.9215,name_match
+chabahar,683,Chabahar,چابهار,IR-11,25.3914,60.7609,name_match
+kahrizak,677,Rey,ری,IR-23,35.3623,51.2132,author_assigned
+borazjan,676,Dashtestan,دشتستان,IR-18,29.2247,51.3763,author_assigned
+salman-shahr,676,Abbasabad,عباس آباد,IR-02,36.8172,51.2127,author_assigned
+andimeshk,664,Andimeshk,اندیمشک,IR-06,32.6366,48.2173,name_match
+royan,661,Nur,نور,IR-02,36.4205,52.0393,author_assigned
+khorramshahr,653,Khoramshahr,خرمشهر,IR-06,30.6361,48.1808,name_match
+dogonbadan,647,Gachsaran,گچساران,IR-17,30.2846,50.8013,author_assigned
+chaf-chamkhale,611,Langarud,لنگرود,IR-01,37.1622,50.1635,author_assigned
+bandar-kangan,609,Kangan,کنگان,IR-18,27.5898,52.1796,author_assigned
+khoshkbijar,589,Rasht,رشت,IR-01,37.342,49.8205,author_assigned
+marand,585,Marand,مرند,IR-03,38.5863,45.6589,name_match
+kouchesfahan,581,Rasht,رشت,IR-01,37.342,49.8205,author_assigned
+pishva,573,Pishva,پیشوا,IR-23,35.3349,51.7469,name_match
+khoy,564,Khoy,خوی,IR-04,38.6431,44.7664,name_match
+marivan,547,Marivan,مریوان,IR-12,35.5993,46.3529,name_match
+sangar,531,Rasht,رشت,IR-01,37.342,49.8205,author_assigned
+kelarestan,524,,,,,,unassigned
+shirvan,522,Shirwan,شیروان,IR-28,37.5239,57.9684,name_match
+masjed-e-soleyman,520,Masjedsoleyman,مسجدسلیمان,IR-06,32.0035,49.2938,author_assigned
+bam,518,Bam,بم,IR-08,29.0659,58.1881,name_match
+torbat-heydariyeh,517,Torbat-e-Heydarieh,تربت حیدریه,IR-09,35.4227,59.0461,author_assigned
+astara,506,Astara,آستارا,IR-01,38.3548,48.8531,name_match
+Iranshahr,504,Iranshahr,ایرانشهر,IR-11,27.6664,60.0957,name_match
+izeh,498,Izeh,ایذه,IR-06,32.0079,49.9137,name_match
+kiashahr,493,Astaneh-ye Ashrafiyeh,آستانه اشرفیه,IR-01,37.4344,50.0551,author_assigned
+bandar-ganaveh,489,Ganaveh,گناوه,IR-18,29.5308,50.4173,author_assigned
+lashtenesha,486,Rasht,رشت,IR-01,37.342,49.8205,author_assigned
+jiroft,483,Jiroft,جیرفت,IR-08,28.7293,57.5468,name_match
+alvand,478,Alborz,البرز,IR-26,36.2138,50.125,author_assigned
+shush,475,Shush,شوش,IR-06,32.2108,48.1398,name_match
+rezvanshahr,464,Rezvanshahr,رضوانشهر,IR-01,37.5893,49.0451,name_match
+saqqez,462,Saqqez,سقز,IR-12,36.1227,46.3575,name_match
+bandar-Imam-khomeini,458,Bandar-e-Mahshahr,بندر ماهشهر,IR-06,30.3612,49.2616,author_assigned
+ahar,453,Ahar,اهر,IR-03,38.5313,47.1386,name_match
+parsabad,449,Parsabad,پارس آباد,IR-24,39.5476,47.8847,name_match
+siahkal,439,Siahkal,سیاهکل,IR-01,36.9322,49.8703,name_match
+shahre-rey,436,Rey,ری,IR-23,35.3623,51.2132,author_assigned
+khomam,434,Khomam,خمام,IR-01,37.5519,49.7212,name_match
+fereydunkenar,433,Fereydunkenar,فریدونکنار,IR-02,36.7929,52.518,name_match
+maragheh,427,Maragheh,ویژه مراغه,IR-03,37.3796,46.3934,name_match
+masal,425,Masal,ماسال,IR-01,37.3698,48.9921,name_match
+kazeroon,417,Kazerun,کازرون,IR-07,29.4541,51.7738,name_match
+garmsar,415,Garmsar,گرمسار,IR-20,34.9888,52.2397,name_match
+chenaran,409,Chenaran,چناران,IR-09,36.8128,59.0965,name_match
+eslamabad-gharb,404,Eslamabad-e Gharb,اسلام آباد غرب,IR-05,34.043,46.652,author_assigned
+chahar-dangeh,403,Eslamshahr,اسلامشهر,IR-23,35.5713,51.2501,author_assigned
+shandiz-city,401,torghabeh shandiz,طرقبه شاندیز,IR-09,36.3058,59.2768,author_assigned
+kuhdasht,398,Kuhdasht,کوهدشت,IR-15,33.6313,47.3785,name_match
+jahrom,391,Jahrom,جهرم,IR-07,28.5958,53.4096,name_match
+meshgin-shahr,388,Meshkinshahr,مشگین شهر,IR-24,38.5367,47.792,author_assigned
+nahavand,387,Nahavand,نهاوند,IR-13,34.2178,48.2474,name_match
+abyek,385,Abyek,آبیک,IR-26,36.0886,50.3459,name_match
+lavasan-city,383,Shemiranat,شمیرانات,IR-23,35.9289,51.6112,author_assigned
+zarand,380,Zarand,زرند,IR-08,30.9082,56.415,name_match
+ramhormoz,378,Ramhormoz,رامهرمز,IR-06,31.2162,49.655,name_match
+saravan,374,Saravan,سراوان,IR-11,27.3601,62.303,name_match
+absard,372,Damavand,دماوند,IR-23,35.6181,52.1841,author_assigned
+takestan,369,Takestan,تاکستان,IR-26,36.0148,49.5683,name_match
+mianeh,369,Mianeh,میانه,IR-03,37.4719,47.7284,name_match
+sabashahr,365,Shahriar,شهریار,IR-23,35.6077,51.0698,author_assigned
+minab,364,Minab,میناب,IR-22,26.9789,57.2321,name_match
+qorveh,362,Ghorveh,قروه,IR-12,35.2533,47.8063,name_match
+quchan,359,Quchan,قوچان,IR-09,37.1447,58.5785,name_match
+jam,347,Jam,جم,IR-18,27.9205,52.2644,name_match
+damghan,346,Damghan,دامغان,IR-20,35.3807,54.3594,name_match
+torbat-jam,345,Torbat-e-jam,تربت جام,IR-09,35.3216,60.6552,author_assigned
+shaft,344,Shaft,شفت,IR-01,37.1283,49.4244,name_match
+bukan,343,Bukan,بوکان,IR-04,36.5286,46.198,name_match
+esfarayen,342,Esfarayen,اسفراین,IR-28,36.9401,57.4566,name_match
+omidiyeh,334,Omidieh,امیدیه,IR-06,30.7921,49.6942,name_match
+nashtarud,331,Tonekabon,تنکابن,IR-02,36.6574,50.813,author_assigned
+fasa-city,330,Fasa,فسا,IR-07,28.9672,53.8182,name_match
+koohsar,329,Savojbolagh,ساوجبلاغ,IR-30,35.9825,50.8365,author_assigned
+khomein,319,Khomein,خمین,IR-00,33.6648,50.0173,name_match
+khomeyni-shahr,315,Khomeyni Shahr,خمینی شهر,IR-10,32.6783,51.5267,name_match
+abbasabad-mazandaran,307,Abbasabad,عباس آباد,IR-02,36.8172,51.2127,author_assigned
+falavarjan,301,Falaverjan,فلاورجان,IR-10,32.5223,51.5346,author_assigned
+golpayegan,298,Golpayegan,گلپایگان,IR-10,33.4533,50.291,name_match
+boroujen,297,Borujen,بروجن,IR-14,31.8574,51.1278,name_match
+firuzkooh,294,Firuzkuh,فیروزکوه,IR-23,35.6371,52.7107,name_match
+miandoab,291,Miandoab,میاندوآب,IR-04,37.0598,45.8168,name_match
+norabad,281,,,,,,unassigned
+dehdasht,280,Kohkiluyeh,کهگیلویه,IR-17,31.0076,50.5714,author_assigned
+maku,279,Maku,ماکو,IR-04,39.4696,44.6196,name_match
+azadshahr-golestan,279,Azadshahr,آزادشهر,IR-27,36.9956,55.4048,author_assigned
+aran-va-bidgol,274,Aran and Bidgol,آران و بیدگل,IR-10,34.1511,51.862,author_assigned
+ardakan,271,Ardakan,اردکان,IR-21,32.6953,54.8625,name_match
+aligudarz,270,Aligudarz,الیگودرز,IR-15,33.1388,49.3837,name_match
+azna,267,Azna,ازنا,IR-15,33.4899,49.4287,name_match
+khash,263,Khash,خاش,IR-11,28.0855,61.1127,name_match
+nurabad,250,,,,,,unassigned
+lordegan,242,Lordegan,لردگان,IR-14,31.4189,50.8997,name_match
+tankaman,236,Nazarabad,نظرآباد,IR-30,35.9022,50.5219,author_assigned
+Kordkuy,233,Kordkuy,کردکوی,IR-27,36.6946,54.2051,name_match
+amlash,233,Amlash,املش,IR-01,36.9749,50.1431,name_match
+aliabad-katul,231,Aliabad,علی آباد کتول,IR-27,36.8315,54.9104,author_assigned
+khalkhal,227,Kahlkhal,خلخال,IR-24,37.4784,48.5022,author_assigned
+kelarabad,226,Abbasabad,عباس آباد,IR-02,36.8172,51.2127,author_assigned
+abadeh,223,Abadeh,آباده,IR-07,31.2213,52.4152,name_match
+meybod,219,Meybod,میبد,IR-21,31.9552,53.375,name_match
+fasham-city,217,Shemiranat,شمیرانات,IR-23,35.9289,51.6112,author_assigned
+sarein,217,Sareyn,سرعین,IR-24,38.1814,47.9834,name_match
+chaboksar,216,Rudsar,رودسر,IR-01,36.9579,50.3886,author_assigned
+kamyaran,214,Kamyaran,کامیاران,IR-12,34.94,46.8531,name_match
+salmas,210,Salmas,سلماس,IR-04,38.1099,44.6971,name_match
+tuyserkan,207,Tuyserkan,تویسرکان,IR-13,34.5529,48.3111,name_match
+susangerd,207,Dasht-e-Azadegan,دشت آزادگان,IR-06,31.7398,48.0417,author_assigned
+sarpol-zahab,202,Sarpol-e-Zahab,سرپل ذهاب,IR-05,34.5305,45.8344,author_assigned
+darab,202,Darab,داراب,IR-07,28.4833,55.0581,name_match
+ferdosiye,202,Shahriar,شهریار,IR-23,35.6077,51.0698,author_assigned
+khorramdarreh,202,Khoramdareh,خرمدره,IR-19,36.2965,49.1723,name_match
+emamzadeh-abdollah,200,Amol,آمل,IR-02,36.2159,52.3079,author_assigned
+kangavar,197,Kangavar,کنگاور,IR-05,34.4519,47.9643,name_match
+shirgah,196,North Savadkuh,سوادکوه شمالی,IR-02,36.317,52.9142,author_assigned
+dehloran,196,Dehloran,دهلران,IR-16,32.6794,47.2301,name_match
+baft,196,Baft,بافت,IR-08,29.0564,56.489,name_match
+asadabad,195,Asadabad,اسدآباد,IR-13,34.787,48.0376,name_match
+kelachay,195,Rudsar,رودسر,IR-01,36.9579,50.3886,author_assigned
+taleqan,195,Taleghan,طالقان,IR-30,36.2219,50.7897,name_match
+firuzabad,193,Firuzabad,فیروزآباد,IR-07,28.862,52.6318,name_match
+shadeghan,193,Shadegan,شادگان,IR-06,30.6281,48.6323,author_assigned
+kahnooj,191,Kahnuj,کهنوج,IR-08,27.9038,57.6146,name_match
+kalale,191,Kalaleh,کلاله,IR-27,37.571,55.613,name_match
+ghayen,189,Qaenat,قائنات,IR-29,33.6502,59.0296,author_assigned
+eshtehard,189,Eshtehard,اشتهارد,IR-30,35.6939,50.4981,name_match
+vahidieh,186,Shahriar,شهریار,IR-23,35.6077,51.0698,author_assigned
+behshahr,182,Behshahr,بهشهر,IR-02,36.7645,53.4853,name_match
+gonabad,179,Gonabad,گناباد,IR-09,34.4206,58.8819,name_match
+shahedshahr,179,Shahriar,شهریار,IR-23,35.6077,51.0698,author_assigned
+khoram-abad,177,Khorramabad,خرم آباد,IR-15,33.3864,48.5594,name_match
+sonqor,172,Sonqor,سنقر,IR-05,34.8544,47.4436,name_match
+khormoj,170,Dashti,دشتی,IR-18,28.4026,51.6467,author_assigned
+eqbaliyeh,168,Qazvin,قزوین,IR-26,36.4555,49.9208,author_assigned
+qeydar,163,Khodabandeh,خدابنده,IR-19,35.9998,48.3799,author_assigned
+eyvan,162,Eyvan,ایوان,IR-16,33.8639,46.1644,name_match
+azarshahr,161,Azarshahr,آذرشهر,IR-03,37.73,45.8689,name_match
+asalem,160,Talesh,طوالش,IR-01,37.9283,48.8776,author_assigned
+mobarakeh,158,Mobarakeh,مبارکه,IR-10,32.2669,51.497,name_match
+mahabad,157,Mahabad,مهاباد,IR-04,36.6643,45.7919,name_match
+zarghan,156,Zarghan,زرقان,IR-07,29.7191,52.8429,name_match
+marzan-abad,151,Chalus,چالوس,IR-02,36.5248,51.4024,author_assigned
+bijar,150,Bijar,بیجار,IR-12,35.9514,47.598,name_match
+minoodasht,150,Minudasht,مینودشت,IR-27,37.1463,55.4475,name_match
+bonab,148,Bonab,بناب,IR-03,37.3519,45.931,name_match
+ziraab,145,Savadkuh,سوادکوه,IR-02,36.0862,52.9667,author_assigned
+taft,143,Taft,تفت,IR-21,31.4218,53.7967,name_match
+pareh-sar,141,Rezvanshahr,رضوانشهر,IR-01,37.5893,49.0451,author_assigned
+javanrud,139,Javanrud,جوانرود,IR-05,34.8617,46.3252,name_match
+hachirud,139,,,,,,unassigned
+koumeleh,137,Langarud,لنگرود,IR-01,37.1622,50.1635,author_assigned
+bandar-torkaman,137,Torkaman,ترکمن,IR-27,36.8981,54.1556,author_assigned
+katalem-sadatshahr,135,Ramsar,رامسر,IR-02,36.8421,50.5873,author_assigned
+mohajeran,134,Shazand,شازند,IR-00,33.9085,49.3195,author_assigned
+ashkhaneh,131,Maneh and Samalqan,مانه و سملقان,IR-28,37.7318,56.7121,author_assigned
+bahar-city,130,Bahar,بهار,IR-13,34.9562,48.3358,name_match
+baneh,130,Baneh,بانه,IR-12,36.0022,45.8676,name_match
+neyriz,127,Neyriz,نی ریز,IR-07,29.1732,54.566,name_match
+aleshtar,127,Selseleh,سلسله,IR-15,33.8337,48.1076,author_assigned
+khansar,126,Khansar,خوانسار,IR-10,33.2492,50.448,name_match
+torghabeh-city,126,torghabeh shandiz,طرقبه شاندیز,IR-09,36.3058,59.2768,author_assigned
+sarab,126,Sarab,سراب,IR-03,37.9956,47.4573,name_match
+dehgolan,124,Dehgolan,دهگلان,IR-12,35.3251,47.3554,name_match
+daran,123,Fereydan,فریدن,IR-10,32.9617,50.3758,author_assigned
+baghershahr,123,Rey,ری,IR-23,35.3623,51.2132,author_assigned
+ahmadsar-gourab,122,Shaft,شفت,IR-01,37.1283,49.4244,author_assigned
+lenjan,121,Lenjan,لنجان,IR-10,32.3759,51.213,name_match
+dayyer,121,Deyr,دیر,IR-18,27.8475,51.5853,author_assigned
+raheem-abad,120,Rudsar,رودسر,IR-01,36.9579,50.3886,author_assigned
+mehriz,120,Mehriz,مهریز,IR-21,31.3688,54.6855,name_match
+sahneh,119,Sahneh,صحنه,IR-05,34.564,47.5763,name_match
+lar,118,Larestan,لارستان,IR-07,27.748,54.8724,author_assigned
+aq-qala,117,Aqqala,آق قلا,IR-27,37.19,54.5313,name_match
+lamerd,115,Lamerd,لامرد,IR-07,27.4892,53.3352,name_match
+mahalat,115,Mahallat,محلات,IR-00,33.8887,50.4259,name_match
+bardsir,114,Bardsir,بردسیر,IR-08,29.7934,56.7069,name_match
+javadabad,112,Varamin,ورامین,IR-23,35.1412,51.7489,author_assigned
+abdanan,111,Abdanan,آبدانان,IR-16,32.8567,47.5257,name_match
+neka,111,Neka,نکا,IR-02,36.6783,53.3222,name_match
+ferdows,110,Ferdows,فردوس,IR-29,33.8558,57.9078,name_match
+shazand,109,Shazand,شازند,IR-00,33.9085,49.3195,name_match
+naqadeh,108,Naqadeh,نقده,IR-04,37.0349,45.4412,name_match
+shahin-dej,108,Shahin Dezh,شاهین دژ,IR-04,36.6629,46.7115,author_assigned
+rostam-abad,106,Rudbar,رودبار,IR-01,36.838,49.5468,author_assigned
+tabas,105,Tabas,طبس,IR-29,33.0514,56.712,name_match
+pirbazar,105,Rasht,رشت,IR-01,37.342,49.8205,author_assigned
+pol-dokhtar,103,,,,,,unassigned
+galikesh,102,Galikash,گالیکش,IR-27,37.3249,55.6034,author_assigned
+asara,101,Karaj,کرج,IR-30,35.9463,51.0709,author_assigned
+roudbaneh,101,Lahijan,لاهیجان,IR-01,37.3234,50.1566,author_assigned
+abrisham-isfahan,100,Falaverjan,فلاورجان,IR-10,32.5223,51.5346,author_assigned
+fazel-abad,98,Aliabad,علی آباد کتول,IR-27,36.8315,54.9104,author_assigned
+mahan,98,Kerman,کرمان,IR-08,30.5136,58.0123,author_assigned
+toutkabon,96,Rudbar,رودبار,IR-01,36.838,49.5468,author_assigned
+eqlid,94,Eqlid,اقلید,IR-07,30.6616,52.3637,name_match
+polsefid,94,Savadkuh,سوادکوه,IR-02,36.0862,52.9667,author_assigned
+otaghvar,91,Langarud,لنگرود,IR-01,37.1622,50.1635,author_assigned
+farahabad,91,Sari,ساری,IR-02,36.4932,53.1103,author_assigned
+tulam-shahr,89,Sowme'eh Sara,صومعه سرا,IR-01,37.3699,49.3455,author_assigned
+delijan,88,Delijan,دلیجان,IR-00,34.0365,50.7859,name_match
+germi,87,Germi,گرمی,IR-24,39.0185,48.1069,name_match
+kilan,87,Damavand,دماوند,IR-23,35.6181,52.1841,author_assigned
+shanderman,85,Masal,ماسال,IR-01,37.3698,48.9921,author_assigned
+kabudrahang,83,Kabutarahang,کبودرآهنگ,IR-13,35.3294,48.3784,author_assigned
+galougah-babol,82,Babol,بابل,IR-02,36.2807,52.6296,author_assigned
+molkabad,81,,,,,,unassigned
+lisar,80,Talesh,طوالش,IR-01,37.9283,48.8776,author_assigned
+shirud,78,Tonekabon,تنکابن,IR-02,36.6574,50.813,author_assigned
+loulman,78,Fuman,فومن,IR-01,37.1561,49.1316,author_assigned
+ghamsar,76,Kashan,کاشان,IR-10,33.9731,51.2616,author_assigned
+gourab-zarmikh,75,Sowme'eh Sara,صومعه سرا,IR-01,37.3699,49.3455,author_assigned
+harsin,73,Harsin,هرسین,IR-05,34.3355,47.5331,name_match
+juybar,71,Juybar,جویبار,IR-02,36.7725,52.9178,name_match
+taybad,70,Taybad,تایباد,IR-09,34.7448,60.6628,name_match
+mehran,68,Mehran,مهران,IR-16,33.2646,46.2851,name_match
+marzikola,66,Babol,بابل,IR-02,36.2807,52.6296,author_assigned
+shelman,65,Langarud,لنگرود,IR-01,37.1622,50.1635,author_assigned
+ramiyan,65,Ramian,رامیان,IR-27,36.9656,55.1033,name_match
+bafq,64,Bafq,بافق,IR-21,31.6459,55.468,name_match
+ramshir,64,Ramshir,رامشیر,IR-06,30.9549,49.383,name_match
+namin,63,Namin,نمین,IR-24,38.387,48.4285,name_match
+hamidiyeh,63,Hamidieh,حمیدیه,IR-06,31.4942,48.4844,name_match
+dabudasht,63,Amol,آمل,IR-02,36.2159,52.3079,author_assigned
+kiakola,62,Simorgh,سیمرغ,IR-02,36.5768,52.8073,author_assigned
+farrokhshahr,60,Sharekurd,شهرکرد,IR-14,32.3051,50.8385,author_assigned
+bahnamir,60,Babolsar,بابلسر,IR-02,36.8239,52.7007,author_assigned
+zahak,59,Zehak,زهک,IR-11,30.8118,61.6329,author_assigned
+deylaman,59,Siahkal,سیاهکل,IR-01,36.9322,49.8703,author_assigned
+hamidia,55,Hamidieh,حمیدیه,IR-06,31.4942,48.4844,author_assigned
+semirom,53,Semirom,سمیرم,IR-10,31.2816,51.6464,name_match
+tahergurab,52,Sowme'eh Sara,صومعه سرا,IR-01,37.3699,49.3455,author_assigned
+bisotun,51,Harsin,هرسین,IR-05,34.3355,47.5331,author_assigned
+aalasht,51,,,,,,unassigned
+kiasar,50,Sari,ساری,IR-02,36.4932,53.1103,author_assigned
+abali,49,,,,,,unassigned
+hendijan,49,Hendijan,هندیجان,IR-06,30.104,49.7723,name_match
+pool,48,,,,,,unassigned
+khaf,47,Khaf,خواف,IR-09,34.4356,60.0628,name_match
+shemshak,47,Shemiranat,شمیرانات,IR-23,35.9289,51.6112,author_assigned
+reyneh,47,Amol,آمل,IR-02,36.2159,52.3079,author_assigned
+rudbar,47,Rudbar,رودبار,IR-01,36.838,49.5468,name_match
+bandar-gaz,47,Bandar-e-Gaz,بندر گز,IR-27,36.7978,53.9525,author_assigned
+rankouh,46,Amlash,املش,IR-01,36.9749,50.1431,author_assigned
+saman-city,45,Saman,سامان,IR-14,32.5514,50.896,name_match
+sisakht,45,Dena,دنا,IR-17,31.0425,51.2104,author_assigned
+chamran-town,42,,,,,,unassigned
+ghorogh,40,,,,,,unassigned
+konarak,39,Konarak,کنارک,IR-11,25.4202,60.1018,name_match
+gomishan,39,Gomishan,گمیشان,IR-27,37.1475,54.0063,name_match
+khan-bin,39,,,,,,unassigned
+shal,38,Buin Zahra,بوئین زهرا,IR-26,35.8395,49.9889,author_assigned
+kojur,37,Nowshahr,نوشهر,IR-02,36.5647,51.7107,author_assigned
+makloan,37,,,,,,unassigned
+sorkhan-kalateh,37,,,,,,unassigned
+manjil,37,Rudbar,رودبار,IR-01,36.838,49.5468,author_assigned
+ziyabar,35,Sowme'eh Sara,صومعه سرا,IR-01,37.3699,49.3455,author_assigned
+bardaskan,34,Bardaskan,بردسکن,IR-09,35.1401,57.4343,name_match
+piranshahr,34,Piranshahr,پیرانشهر,IR-04,36.6808,45.2976,name_match
+lavandevil,34,Astara,آستارا,IR-01,38.3548,48.8531,author_assigned
+barah-sar,32,,,,,,unassigned
+akand,31,,,,,,unassigned
+khoshroud-pey,31,,,,,,unassigned
+sourek,31,,,,,,unassigned
+takht,31,,,,,,unassigned
+paeen-holar,29,,,,,,unassigned
+amirkala,29,,,,,,unassigned
+baladeh,29,,,,,,unassigned
+hadi-shahr,29,,,,,,unassigned
+zargarshahr,28,,,,,,unassigned
+galugah-babol,28,Babol,بابل,IR-02,36.2807,52.6296,author_assigned
+gahvareh,27,,,,,,unassigned
+dalkhani,26,,,,,,unassigned
+farim,26,,,,,,unassigned
+mohr,25,Mohr,مهر,IR-07,27.6856,52.6703,name_match
+haviq,25,,,,,,unassigned
+gazanak,25,,,,,,unassigned
+loshan,24,,,,,,unassigned
+babakan,24,,,,,,unassigned
+kouhi-kheyl,23,,,,,,unassigned
+vajargah,22,,,,,,unassigned
+hormuz,22,,,,,,unassigned
+chobar,20,,,,,,unassigned
+sardasht,19,Sardasht,سردشت,IR-04,36.1585,45.493,name_match
+jirandeh,19,,,,,,unassigned
+nodeh-khandoz,19,,,,,,unassigned
+dargahan,18,,,,,,unassigned
+jelin,16,,,,,,unassigned
+rostamkola,15,,,,,,unassigned
+negin-shahr,14,,,,,,unassigned
+oshnavieh,14,Oshnavieh,اشنویه,IR-04,37.0802,45.0229,name_match
+arjmand,14,,,,,,unassigned
+sadegh-abad,14,,,,,,unassigned
+arateh,13,,,,,,unassigned
+mazrae-katool,13,,,,,,unassigned
+masuleh,13,,,,,,unassigned
+daland,12,,,,,,unassigned
+alghajar,12,,,,,,unassigned
+faragi,10,,,,,,unassigned
+gatab,10,,,,,,unassigned
+nokandeh,10,,,,,,unassigned
+khalil-shahr,9,,,,,,unassigned
+astaneh-sara,9,,,,,,unassigned
+boluk,8,,,,,,unassigned
+sijval,6,,,,,,unassigned
+tabaghdeh,6,,,,,,unassigned
+simin-shahr,6,,,,,,unassigned
+khour,5,,,,,,unassigned
+inche-borun,4,,,,,,unassigned
+dozin,4,,,,,,unassigned
+sangdovin,4,,,,,,unassigned
+goli-dagh,3,,,,,,unassigned
+qasemabad-khaf,3,,,,,,unassigned
+maraveh-tapeh,2,Maraveh Tappeh,مراوه تپه,IR-27,37.8198,55.8897,name_match
+yanghagh,1,,,,,,unassigned
+anbaralum,1,,,,,,unassigned
+tatar-olya,1,,,,,,unassigned

@@ -1,0 +1,102 @@
+{
+ "en": {
+  "sources": [
+   [
+    "Divar official real-estate dataset (1,000,000 ads, ODbL)",
+    "https://huggingface.co/datasets/divarofficial/real_estate_ads",
+    "516,947 residential-sale ads in 420 cities, 1400–1403; used through the published city and Tehran-neighbourhood aggregates of maminigder/Iran-Real-Estate-Market-Analysis (MIT)."
+   ],
+   [
+    "Divar Tehran house prices (3,479 ads)",
+    "https://github.com/F-Yousefi/House_Price_Prediction",
+    "Individual Tehran listings with area, rooms, parking, storage, elevator and price; mirror of the Kaggle dataset. Trains the pricing model."
+   ],
+   [
+    "Central Bank of Iran, Tehran housing market reports",
+    "https://www.cbi.ir/category/16994.aspx",
+    "Monthly mean price per m² of Tehran transactions. 1395–1399 via amiralimadadi/Regression_TheranHousing; 1400–1403 via the cited extracts in Captain-Jorf/tehran-house-price."
+   ],
+   [
+    "Kilid.com Tehran price indicator",
+    "https://kilid.com/house-prices/tehran",
+    "Monthly listing-based indicator, 1404/06–1405/05. Methodology not fully documented; treated as a platform signal."
+   ],
+   [
+    "Tehran's 22 municipal districts",
+    "https://github.com/rferdosi/tehran-districts",
+    "District polygons used for point-in-polygon assignment of neighbourhoods."
+   ],
+   [
+    "Iran provinces and counties (OpenStreetMap, ODbL)",
+    "https://github.com/hosseinhabibi2004/iran-geojson",
+    "Province outlines for the national map; county names and locations for matching Divar cities to provinces."
+   ]
+  ],
+  "limits": [
+   "Divar prices are asking prices. The Central Bank series is completed transactions. They are shown side by side, never mixed in one number.",
+   "District and province figures are listing-weighted medians of neighbourhood or city medians, because the 1M-ad release publishes medians, not raw ads.",
+   "The 3,447-ad Tehran sample is undated. Its price level matches the Central Bank's transaction average of spring–summer 1401 and its USD column implies 30,000 toman/$, so it is labelled 'c. 1400'.",
+   "Five neighbourhoods whose 1403 median sits below 45% of their district's are flagged as probable mixed listings: shown on the map, left out of district figures.",
+   "The Central Bank stopped publishing after Mordad 1403; Kilid's indicator starts in Shahrivar 1404. The 12 months between them have no series in this project.",
+   "A one-year forecast of Tehran prices has missed by 21% on average even with the best method. The bands are the honest part of the forecast.",
+   "Nothing here is investment advice."
+  ],
+  "findings": {
+   "gradient": "District 1 lists at {d1}, {x} times District {dmin} ({dminv} M). The top three districts are all in the north.",
+   "catch": "Across districts with enough older data, the cheaper a district was around 1400, the faster it rose (correlation {r}). District {gmax} multiplied ×{gmaxv}; District 1 ×{g1}.",
+   "capital": "Tehran province's listings ask {x} times the national median per m². The runner-up, {second}, is at {secondv}; Alborz (Karaj), next door, at {alborz}.",
+   "forecast": "Extrapolating last year's growth is the worst of five forecasting methods (12-month error {bad}); the long-run growth rate is the best ({good}).",
+   "model": "Location explains most of the price: a location-only baseline already reaches R² {loc}; size, rooms and amenities lift it to {ols}. Parking adds {pk}, an elevator {el}."
+  }
+ },
+ "fa": {
+  "sources": [
+   [
+    "مجموعه‌داده‌ی رسمی املاک دیوار (یک میلیون آگهی، ODbL)",
+    "https://huggingface.co/datasets/divarofficial/real_estate_ads",
+    "۵۱۶٬۹۴۷ آگهی فروش مسکونی در ۴۲۰ شهر، ۱۴۰۰ تا ۱۴۰۳؛ از طریق جدول‌های تجمیعی شهر و محله‌ی تهران که در مخزن maminigder/Iran-Real-Estate-Market-Analysis (MIT) منتشر شده‌اند."
+   ],
+   [
+    "قیمت خانه در تهران از دیوار (۳٬۴۷۹ آگهی)",
+    "https://github.com/F-Yousefi/House_Price_Prediction",
+    "آگهی‌های تک‌به‌تک تهران با متراژ، اتاق، پارکینگ، انباری، آسانسور و قیمت؛ نسخه‌ی آینه‌ی داده‌ی کگل. مدل قیمت‌گذاری روی آن آموزش دیده است."
+   ],
+   [
+    "بانک مرکزی، گزارش تحولات بازار مسکن تهران",
+    "https://www.cbi.ir/category/16994.aspx",
+    "میانگین ماهانه‌ی قیمت هر متر در معاملات تهران. ۱۳۹۵ تا ۱۳۹۹ از amiralimadadi/Regression_TheranHousing؛ ۱۴۰۰ تا ۱۴۰۳ از استخراج‌های مستند در Captain-Jorf/tehran-house-price."
+   ],
+   [
+    "شاخص قیمت تهران در کیلید",
+    "https://kilid.com/house-prices/tehran",
+    "شاخص ماهانه‌ی مبتنی بر آگهی، شهریور ۱۴۰۴ تا مرداد ۱۴۰۵. روش محاسبه کامل منتشر نشده؛ به‌عنوان سیگنال یک سکو استفاده شده است."
+   ],
+   [
+    "مرز ۲۲ منطقه‌ی شهرداری تهران",
+    "https://github.com/rferdosi/tehran-districts",
+    "چندضلعی منطقه‌ها برای نسبت دادن محله‌ها به منطقه با روش نقطه در چندضلعی."
+   ],
+   [
+    "استان‌ها و شهرستان‌های ایران (OpenStreetMap، ODbL)",
+    "https://github.com/hosseinhabibi2004/iran-geojson",
+    "مرز استان‌ها برای نقشه‌ی کشور؛ نام و موقعیت شهرستان‌ها برای تطبیق شهرهای دیوار با استان."
+   ]
+  ],
+  "limits": [
+   "قیمت‌های دیوار قیمت پیشنهادی آگهی‌اند و سری بانک مرکزی قیمت معاملات انجام‌شده. این دو کنار هم نمایش داده می‌شوند و هرگز در یک عدد ترکیب نمی‌شوند.",
+   "عدد منطقه و استان، میانه‌ی وزنی (به وزن تعداد آگهی) از میانه‌ی محله‌ها یا شهرهاست؛ چون داده‌ی یک میلیونی به‌صورت میانه منتشر شده، نه آگهی خام.",
+   "نمونه‌ی ۳٬۴۴۷ آگهی تهران تاریخ ندارد. سطح قیمتش با میانگین معاملات بانک مرکزی در بهار و تابستان ۱۴۰۱ جور است و ستون دلاری‌اش نرخ ۳۰ هزار تومان را نشان می‌دهد؛ برای همین «حدود ۱۴۰۰» نام گرفته است.",
+   "پنج محله که میانه‌ی ۱۴۰۳شان زیر ۴۵٪ میانه‌ی منطقه است، احتمالاً آگهی‌های درهم دارند: روی نقشه هستند ولی در عدد منطقه حساب نمی‌شوند.",
+   "بانک مرکزی بعد از مرداد ۱۴۰۳ گزارشی منتشر نکرد و شاخص کیلید از شهریور ۱۴۰۴ شروع می‌شود. برای ۱۲ ماه بین این دو، سری‌ای در این پروژه نیست.",
+   "پیش‌بینی یک‌ساله‌ی قیمت تهران حتی با بهترین روش به‌طور میانگین ۲۱٪ خطا داشته است. بازه‌ها بخش صادقانه‌ی پیش‌بینی‌اند.",
+   "هیچ‌کدام از این‌ها توصیه‌ی سرمایه‌گذاری نیست."
+  ],
+  "findings": {
+   "gradient": "منطقه‌ی ۱ با {d1}، {x} برابر منطقه‌ی {dmin} ({dminv} میلیون) است. سه منطقه‌ی گران همه در شمال‌اند.",
+   "catch": "در منطقه‌هایی که داده‌ی قدیمی کافی دارند، هرچه منطقه در حدود ۱۴۰۰ ارزان‌تر بوده، سریع‌تر گران شده است (همبستگی {r}). منطقه‌ی {gmax} ×{gmaxv} شد و منطقه‌ی ۱ ×{g1}.",
+   "capital": "قیمت متری آگهی‌های استان تهران {x} برابر میانه‌ی کشور است. رتبه‌ی دوم، {second}، با فاصله‌ی زیاد {secondv} است و البرز (کرج) در همسایگی {alborz}.",
+   "forecast": "ادامه دادن رشد سال گذشته بدترین روش از پنج روش پیش‌بینی است (خطای ۱۲ ماهه {bad})؛ نرخ رشد بلندمدت بهترین است ({good}).",
+   "model": "موقعیت بیشتر قیمت را توضیح می‌دهد: مدل پایه‌ی «فقط موقعیت» به R² برابر {loc} می‌رسد و متراژ، اتاق و امکانات آن را به {ols} می‌رسانند. پارکینگ {pk} و آسانسور {el} به قیمت اضافه می‌کنند."
+  }
+ }
+}

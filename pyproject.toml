@@ -1,0 +1,18 @@
+[project]
+name = "iran-housing"
+version = "1.0.0"
+description = "Iran & Tehran housing market analytics: real listings, official prices, maps and models"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Milad Shabani" }]
+dependencies = ["pandas>=2.1", "numpy>=1.26", "scikit-learn>=1.4", "statsmodels>=0.14", "shapely>=2.0"]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

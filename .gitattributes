@@ -1,0 +1,6 @@
+# Keep the language bar honest: built pages and data are output, not source.
+site/**        linguist-generated
+data/**        linguist-generated
+docs/**        linguist-documentation
+*.png          binary
+*.woff2        binary

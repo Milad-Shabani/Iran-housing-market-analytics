@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="{{LANG}}" dir="{{DIR}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}}</title>
+<meta name="description" content="{{lede}}">
+<meta property="og:title" content="{{title}}">
+<meta property="og:description" content="{{lede}}">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230d366b'/%3E%3Cpath d='M7 17 16 9l9 8v7H7z' fill='%23fff'/%3E%3Crect x='14' y='18' width='4' height='6' fill='%233987e5'/%3E%3C/svg%3E">
+<style>{{FONT_FACE}}
+{{CSS}}</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0d366b"/><path d="M7 17 16 9l9 8v7H7z" fill="#fff"/><rect x="14" y="18" width="4" height="6" fill="#3987e5"/></svg>
+      <div>{{brand}}<small>{{brand_sub}}</small></div>
+    </div>
+    <nav class="nav" aria-label="sections">
+      <a href="#tehran">{{nav_tehran}}</a><a href="#pricing">{{nav_pricing}}</a><a href="#iran">{{nav_iran}}</a><a href="#forecast">{{nav_forecast}}</a><a href="#model">{{nav_model}}</a><a href="#data">{{nav_data}}</a>
+    </nav>
+    <a class="lang" href="{{lang_href}}" hreflang="{{OTHER_LANG}}">{{lang_switch}}</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <div class="eyebrow">{{eyebrow}}</div>
+    <h1>{{h1}}</h1>
+    <p class="lede">{{lede}}</p>
+    <div class="pills" id="pills"></div>
+    <div class="scopebar"><span>{{scope_label}}</span><span class="scope-chip" id="scopeChip"></span></div>
+    <div class="kpis" id="kpis" aria-live="polite"></div>
+  </div>
+
+  <section class="block" id="tehran">
+    <div class="sec-head"><div><h2><span class="num">1</span>{{s1_title}}</h2><p>{{s1_desc}}</p></div></div>
+    <div class="controls">
+      <label class="ctl">{{metric}} <select id="tMetric"></select></label>
+      <div class="ctl">{{layer}} <div class="seg" id="tLayer"><button data-v="d" aria-pressed="true">{{layer_d}}</button><button data-v="h" aria-pressed="false">{{layer_h}}</button></div></div>
+      <label class="switch"><input type="checkbox" id="tBudgetOn"> {{budget_mode}}</label>
+    </div>
+    <div class="budget" id="tBudget">
+      <label class="ctl">{{budget}} <input type="number" id="bAmt" min="0.5" max="200" step="0.5" value="8"> {{budget_unit}}</label>
+      <label class="ctl">{{size}} <input type="number" id="bSize" min="30" max="400" step="5" value="75"> {{size_unit}}</label>
+      <input type="range" id="bAmtR" min="0.5" max="60" step="0.5" value="8" style="flex:1;min-width:140px" aria-label="{{budget}}">
+      <span id="bCount" class="muted"></span>
+    </div>
+    <div class="grid g-map">
+      <div class="card">
+        <div class="mapbox" id="tMapBox">
+          <svg id="tMap" role="img" aria-label="{{s1_title}}"></svg>
+          <div class="compass">{{north}}</div>
+          <div class="zoom"><button data-z="in" title="{{zoom_in}}" aria-label="{{zoom_in}}">+</button><button data-z="out" title="{{zoom_out}}" aria-label="{{zoom_out}}">−</button><button data-z="reset" title="{{zoom_reset}}" aria-label="{{zoom_reset}}">⟲</button></div>
+        </div>
+        <div class="legend" id="tLegend"></div>
+      </div>
+      <div class="card side" id="tSide"></div>
+    </div>
+    <div class="grid g-2" style="margin-top:14px">
+      <div class="card"><h3>{{rank_title}}</h3><p class="note">{{rank_desc}}</p><div class="chart" id="tRank"></div></div>
+      <div class="card"><h3>{{catch_title}}</h3><p class="note">{{catch_desc}}</p><div class="chart" id="tCatch"></div></div>
+    </div>
+  </section>
+
+  <section class="block" id="pricing">
+    <div class="sec-head"><div><h2><span class="num">2</span>{{s2_title}}</h2><p>{{s2_desc}}</p></div></div>
+    <div class="grid g-val">
+      <div class="card">
+        <div class="form">
+          <div class="field hoodpick"><label for="vSearch">{{f_hood}}</label>
+            <input type="search" id="vSearch" placeholder="{{f_search}}" autocomplete="off">
+            <select id="vHood" size="7"></select></div>
+          <div class="field"><label for="vArea">{{f_area}} <span id="vAreaOut" class="muted"></span></label>
+            <div class="row"><input type="range" id="vArea" min="30" max="300" step="1" value="90"><input type="number" id="vAreaN" min="20" max="600" value="90"></div></div>
+          <div class="field"><label>{{f_rooms}}</label><div class="seg" id="vRooms"><button data-v="0">0</button><button data-v="1">1</button><button data-v="2" aria-pressed="true">2</button><button data-v="3">3</button><button data-v="4">4+</button></div></div>
+          <div class="field"><label>{{f_amen}}</label><div class="toggles">
+            <button class="tog" id="vPark" aria-pressed="true"><span class="dot"></span>{{f_parking}}</button>
+            <button class="tog" id="vStor" aria-pressed="true"><span class="dot"></span>{{f_storage}}</button>
+            <button class="tog" id="vElev" aria-pressed="true"><span class="dot"></span>{{f_elevator}}</button></div></div>
+          <div class="field"><label for="vRoll">{{f_level}} <span id="vRollOut" class="muted"></span></label>
+            <div class="row"><input type="range" id="vRoll" min="0" max="250" step="1" value="0"></div>
+            <div class="chips" id="vRollChips" style="margin-top:6px"></div>
+            <p class="note" style="margin:6px 0 0">{{f_level_note}}</p></div>
+        </div>
+        <div id="vLeft" style="margin-top:18px;border-top:1px solid var(--grid);padding-top:14px"></div>
+      </div>
+      <div class="card" id="vOut"></div>
+    </div>
+  </section>
+
+  <section class="block" id="iran">
+    <div class="sec-head"><div><h2><span class="num">3</span>{{s3_title}}</h2><p>{{s3_desc}}</p></div></div>
+    <div class="controls">
+      <label class="ctl">{{metric}} <select id="iMetric"></select></label>
+      <label class="switch"><input type="checkbox" id="iCities"> {{cities_toggle}}</label>
+    </div>
+    <div class="grid g-map">
+      <div class="card">
+        <div class="mapbox" id="iMapBox">
+          <svg id="iMap" role="img" aria-label="{{s3_title}}"></svg>
+          <div class="zoom"><button data-z="in" title="{{zoom_in}}" aria-label="{{zoom_in}}">+</button><button data-z="out" title="{{zoom_out}}" aria-label="{{zoom_out}}">−</button><button data-z="reset" title="{{zoom_reset}}" aria-label="{{zoom_reset}}">⟲</button></div>
+        </div>
+        <div class="legend" id="iLegend"></div>
+      </div>
+      <div class="card side" id="iSide"></div>
+    </div>
+    <div class="grid g-2" style="margin-top:14px">
+      <div class="card"><h3>{{major_title}}</h3><p class="note">{{major_desc}}</p>
+        <div class="controls" style="margin-bottom:4px"><div class="seg" id="mMode"><button data-v="adj" aria-pressed="true">{{adj}}</button><button data-v="raw" aria-pressed="false">{{raw}}</button></div></div>
+        <div class="keyrow" id="mKey"></div><div class="chart" id="mChart"></div></div>
+      <div class="card"><h3>{{sat_title}}</h3><p class="note">{{sat_desc}}</p><div class="chart" id="satChart"></div></div>
+    </div>
+  </section>
+
+  <section class="block" id="forecast">
+    <div class="sec-head"><div><h2><span class="num">4</span>{{s4_title}}</h2><p>{{s4_desc}}</p></div></div>
+    <div class="controls">
+      <div class="ctl">{{scale}} <div class="seg" id="fScale"><button data-v="log" aria-pressed="true">{{log}}</button><button data-v="lin" aria-pressed="false">{{linear}}</button></div></div>
+      <label class="ctl">{{method}} <select id="fMethod"></select></label>
+      <label class="ctl" style="flex:1;min-width:260px">{{growth_assump}} <input type="range" id="fG" min="0" max="150" step="1" style="flex:1"> <b id="fGOut" class="nowrap"></b></label>
+      <div class="chips" id="fPresets"></div>
+    </div>
+    <div class="card"><div class="keyrow" id="fKey"></div><div class="chart" id="fChart"></div></div>
+    <div class="grid g-3" style="margin-top:14px">
+      <div class="card" id="fOut"></div>
+      <div class="card" id="fReal"></div>
+      <div class="card"><h3>{{yoy_title}}</h3><p class="note">{{yoy_desc}}</p><div class="chart" id="yoyChart"></div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>{{lb_title}}</h3><p class="note">{{lb_desc}}</p><div class="tscroll" id="fLb"></div></div>
+  </section>
+
+  <section class="block" id="model">
+    <div class="sec-head"><div><h2><span class="num">5</span>{{s5_title}}</h2><p>{{s5_desc}}</p></div></div>
+    <div class="card tscroll" id="mCv"></div>
+    <div class="grid g-3" style="margin-top:14px">
+      <div class="card"><h3>{{coef_title}}</h3><p class="note">{{coef_desc}}</p><div class="chart" id="coefChart"></div></div>
+      <div class="card"><h3>{{scatter_title}}</h3><p class="note">{{scatter_desc}}</p><div class="chart" id="scChart"></div></div>
+      <div class="card"><h3>{{imp_title}}</h3><p class="note">{{imp_desc}}</p><div class="chart" id="impChart"></div></div>
+    </div>
+  </section>
+
+  <section class="block" id="data">
+    <div class="sec-head"><div><h2><span class="num">6</span>{{s6_title}}</h2><p>{{s6_desc}}</p></div></div>
+    <div class="grid g-3">
+      <div class="card"><h3>{{findings}}</h3><div id="dFind" class="grid" style="gap:12px;margin-top:10px"></div></div>
+      <div class="card"><h3>{{sources}}</h3><ul class="src" id="dSrc"></ul></div>
+      <div class="card"><h3>{{limits}}</h3><ul class="src" id="dLim"></ul></div>
+    </div>
+  </section>
+</main>
+<footer><div class="wrap">{{footer}} · <a href="https://github.com/Milad-Shabani/Iran-housing-market-analytics">GitHub</a> · <a href="https://miladshabani.ir">miladshabani.ir</a> · <span id="built"></span></div></footer>
+<div class="tip" id="tip" role="tooltip"></div>
+<script>window.__LANG__="{{LANG}}";window.__T__={{I18N}};window.__DATA__={{DATA}};window.__TEXT__={{TEXT}};</script>
+<script>{{APP}}</script>
+</body>
+</html>

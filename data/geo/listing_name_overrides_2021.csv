@@ -1,0 +1,80 @@
+address,target_type,target,note
+Punak,neighborhood,poonak,spelling
+Gheitarieh,neighborhood,qeytariyeh,spelling
+West Ferdows Boulevard,neighborhood,kooy-e-ferdos,Ferdows Blvd area (district 5)
+East Ferdows Boulevard,neighborhood,kooy-e-ferdos,Ferdows Blvd area (district 5)
+Shahran,neighborhood,north-shahran,Divar later split Shahran north/south
+Southern Janatabad,neighborhood,south-janat-abad,spelling
+Northern Janatabad,neighborhood,north-janat-abad,spelling
+Persian Gulf Martyrs Lake,neighborhood,chitgar-lake,Chitgar (Persian Gulf) lake
+Salsabil,neighborhood,sarsabil,Divar slug spelling
+Feiz Garden,neighborhood,bagh-feyz,Bagh-e Feyz
+North Program Organization,neighborhood,sazamn-barnameh,Sazman-e Barnameh (Divar slug spelling)
+Southern Program Organization,neighborhood,sazamn-barnameh,Sazman-e Barnameh (Divar slug spelling)
+Zaferanieh,neighborhood,zafaraniyeh,spelling
+Abazar,neighborhood,aboozar,spelling
+Abuzar,neighborhood,abouzar,spelling
+Si Metri Ji,neighborhood,jey,Si-metri-ye Jey
+Northern Chitgar,neighborhood,chitgar,
+Southern Chitgar,neighborhood,chitgar,
+Northren Jamalzadeh,neighborhood,jamalzadeh,
+Dorous,neighborhood,darrous,spelling
+West Pars,neighborhood,west-tehranpars,
+East Pars,neighborhood,east-tehranpars,
+Qazvin Imamzadeh Hassan,neighborhood,imamzadeh-hasan,
+Air force,neighborhood,niroo-havayi,Niru-ye Havayi
+Dehkade Olampic,neighborhood,dehkade-olympic,spelling
+ShahrAra,neighborhood,sharara,Shahrara
+Water Organization,neighborhood,sazman-ab,Sazman-e Ab
+Tehran Now,neighborhood,tehran-no,
+Northern Suhrawardi,neighborhood,north-sohrevardi,
+Southern Suhrawardi,neighborhood,north-sohrevardi,same corridor (district 7)
+Keshavarz Boulevard,neighborhood,bolvar-e-keshavarz,
+Heshmatieh,neighborhood,heshamatiyeh,spelling
+Republic,neighborhood,jomhouri,Jomhouri
+Mahallati,neighborhood,shahrak-e-mahalati,
+Shahrakeh Naft,neighborhood,shahrak-naft,
+Waterfall,neighborhood,abshar,Abshar
+Chidz,neighborhood,chizar,spelling
+Argentina,neighborhood,arjantin,spelling
+Shahrake Shahid Bagheri,neighborhood,shahrak-shahid-bagheri,
+Nawab,neighborhood,shahid-navab-safavi,Navvab
+Mehrabad,neighborhood,south-mehrabad,
+Gandhi,neighborhood,gandi,spelling
+Mirza Shirazi,neighborhood,shirazi,
+Thirteen November,neighborhood,sizdah-aban,13 Aban
+Aliabad South,neighborhood,south-ali-abad,
+Ghiyamdasht,neighborhood,qiamdash,Qiamdasht
+Koohsar,neighborhood,shahrak-e-koohsar,
+Ray,district,20,Shahr-e Rey is municipal district 20
+Ray - Pilgosh,district,20,Shahr-e Rey is municipal district 20
+Ray - Montazeri,district,20,Shahr-e Rey is municipal district 20
+Pardis,city,pardis-city,satellite town
+Parand,city,parand-city,satellite town
+Andisheh,city,andisheh-new-town,satellite town (price level rules out the Tehran street)
+Shahrake Qods,city,qods-city,Shahr-e Qods (price level rules out Shahrak-e Gharb)
+Shahrake Quds,city,qods-city,Shahr-e Qods
+Golestan,city,golestan-baharestan,satellite town
+Islamshahr,city,eslamshahr,satellite town
+Islamshahr Elahieh,city,eslamshahr,satellite town
+Pakdasht,city,pakdasht-city,satellite town
+Pakdasht KhatunAbad,city,pakdasht-city,satellite town
+Damavand,city,damavand,satellite town
+Kahrizak,city,kahrizak,satellite town
+Shahryar,city,shahriar-city,satellite town
+Rudhen,city,rudehen,satellite town
+Qarchak,city,qarchak-city,satellite town
+Robat Karim,city,robat-karim,satellite town
+Pishva,city,pishva,satellite town
+Nasim Shahr,city,nasimshahr,satellite town
+Lavasan,city,lavasan-city,satellite town
+Absard,city,absard,satellite town
+Firoozkooh,city,firuzkooh,satellite town
+Firoozkooh Kuhsar,city,firuzkooh,satellite town
+Shahedshahr,city,shahedshahr,satellite town
+Chahardangeh,city,chahar-dangeh,satellite town
+Chardangeh,city,chahar-dangeh,satellite town
+Baqershahr,city,baghershahr,satellite town
+SabaShahr,city,sabashahr,satellite town
+Safadasht,city,safadasht-industrial-city,satellite town
+Varamin - Beheshti,city,varamin-city,satellite town

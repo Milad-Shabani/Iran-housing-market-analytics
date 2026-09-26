@@ -1,0 +1,104 @@
+{
+  "built": "2026-09-26",
+  "tehran_median_ppm2_2024": 94122243.3652317,
+  "neighbourhood_quality": {
+    "ok": 297,
+    "thin_sample": 30,
+    "outside_districts": 13,
+    "outlier_vs_district": 5
+  },
+  "listings_2024_in_districts": 91260,
+  "listings_2024_total": 91836,
+  "cleaning_2021": {
+    "raw_rows": 3479,
+    "dropped_bad_area": 5,
+    "dropped_missing_price_or_address": 23,
+    "dropped_ppm2_outliers": 4,
+    "clean_rows": 3447
+  },
+  "linking_2021": {
+    "tehran_district": 2683,
+    "satellite_town": 605,
+    "unlocated": 159,
+    "addresses": 192,
+    "addresses_linked": 168
+  },
+  "growth_vs_2021_level_corr": -0.708018214212824,
+  "tehran_median_ppm2_2021": 40000000.0,
+  "national_median_ppm2_2024": 29234978.56578882,
+  "valuation_cv": {
+    "hedonic_ols": {
+      "r2_log": 0.8822415768344622,
+      "mape": 0.2928737484481334,
+      "median_ape": 0.15688508578668203,
+      "within_20pct": 0.6115462721206847
+    },
+    "gradient_boosting": {
+      "r2_log": 0.8963214690965163,
+      "mape": 0.26683193782603387,
+      "median_ape": 0.15053424273550373,
+      "within_20pct": 0.6193791702930084
+    },
+    "location_only": {
+      "r2_log": 0.8666015008712699,
+      "mape": 0.3233727420988659,
+      "median_ape": 0.17281924414467267,
+      "within_20pct": 0.5616478096895852
+    }
+  },
+  "forecast_best_method": "drift_long",
+  "forecast_leaderboard": [
+    {
+      "method": "drift_long",
+      "mape_h1": 0.0336,
+      "mape_h3": 0.0712,
+      "mape_h6": 0.1294,
+      "mape_h12": 0.2079,
+      "mape_avg_1_12": 0.1311,
+      "mape_h24": 0.1524,
+      "origins_h12": 35
+    },
+    {
+      "method": "naive",
+      "mape_h1": 0.0358,
+      "mape_h3": 0.0894,
+      "mape_h6": 0.1821,
+      "mape_h12": 0.3266,
+      "mape_avg_1_12": 0.1894,
+      "mape_h24": 0.537,
+      "origins_h12": 35
+    },
+    {
+      "method": "holt_damped",
+      "mape_h1": 0.0329,
+      "mape_h3": 0.0879,
+      "mape_h6": 0.2015,
+      "mape_h12": 0.338,
+      "mape_avg_1_12": 0.1953,
+      "mape_h24": 0.589,
+      "origins_h12": 35
+    },
+    {
+      "method": "local_linear_trend",
+      "mape_h1": 0.0335,
+      "mape_h3": 0.0919,
+      "mape_h6": 0.2119,
+      "mape_h12": 0.3897,
+      "mape_avg_1_12": 0.2064,
+      "mape_h24": 0.8738,
+      "origins_h12": 35
+    },
+    {
+      "method": "drift_12m",
+      "mape_h1": 0.0366,
+      "mape_h3": 0.0935,
+      "mape_h6": 0.1938,
+      "mape_h12": 0.3921,
+      "mape_avg_1_12": 0.213,
+      "mape_h24": 0.438,
+      "origins_h12": 35
+    }
+  ],
+  "cbi_long_run_annual_growth": 0.44623590455464945,
+  "kilid_annualised_growth_last_12m": 1.2788273740362992
+}

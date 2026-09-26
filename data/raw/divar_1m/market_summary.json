@@ -1,0 +1,15 @@
+{
+  "processed_residential_sale_rows": 533242,
+  "analysis_ready_before_ppsqm_tail_filter": 522163,
+  "core_analysis_rows": 516947,
+  "cities_in_core_sample": 420,
+  "observed_listing_month_min": "2021-02-01T00:00:00",
+  "observed_listing_month_max": "2025-03-01T00:00:00",
+  "median_building_size_sqm": 110.0,
+  "median_asking_price_source_units": 2800000000.0,
+  "median_asking_price_per_sqm_source_units": 27708333.333333332,
+  "minimum_city_sample_for_price_ranking": 100,
+  "lower_ppsqm_cutoff": 14.892249353233826,
+  "upper_ppsqm_cutoff": 380000000.0,
+  "interpretation_note": "Prices are listing/asking values. Monetary denomination is preserved as source units because the official dataset documentation does not clearly specify the unit."
+}
