@@ -4,7 +4,7 @@
 
 [![Live dashboard](https://img.shields.io/badge/live-dashboard-2a78d6?style=flat-square)](https://milad-shabani.github.io/Iran-housing-market-analytics/)
 [![Persian edition](https://img.shields.io/badge/نسخه-فارسی-0d366b?style=flat-square)](https://milad-shabani.github.io/Iran-housing-market-analytics/index.fa.html)
-[![Tests](https://img.shields.io/badge/tests-47%20passing-1baf7a?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-48%20passing-1baf7a?style=flat-square)](#tests)
 [![Dependencies](https://img.shields.io/badge/dashboard%20dependencies-none-52514e?style=flat-square)](#how-it-is-built)
 [![License](https://img.shields.io/badge/code-MIT-666?style=flat-square)](LICENSE)
 
@@ -98,7 +98,7 @@ data/raw  ──►  src/iran_housing  ──►  data/processed  ──►  das
 pip install -r requirements.txt
 python scripts/run_pipeline.py      # clean, locate, summarise, model, forecast -> data/processed/
 python scripts/build_dashboard.py   # -> site/index.html and site/index.fa.html
-pytest -q                           # 47 tests
+pytest -q                           # 48 tests
 ```
 
 `make all` does the same. To refresh or audit the raw layer from the upstream files: `python scripts/fetch_sources.py --check`, then `python scripts/prepare_geo.py`.
@@ -145,7 +145,7 @@ figures in this dashboard come from Kilid's published indicator and, once collec
 
 ## Tests
 
-47 tests in [`tests/`](tests/): Jalali calendar conversion, raw-file shapes, every official value carrying a URL, unit consistency across the Central Bank transcriptions, landmarks (Tajrish, Vanak, Azadi Tower, Chitgar lake, Shahr-e Rey) landing in the right district, the north–south gradient, Tehran as the most expensive province, the model beating its baseline, forecasts using only past data, both pages being free of external requests, every period in the page data using the same fields, and the Divar collector's parsing and aggregation.
+48 tests in [`tests/`](tests/): Jalali calendar conversion, raw-file shapes, every official value carrying a URL, unit consistency across the Central Bank transcriptions, landmarks (Tajrish, Vanak, Azadi Tower, Chitgar lake, Shahr-e Rey) landing in the right district, the north–south gradient, Tehran as the most expensive province, the model beating its baseline, forecasts using only past data, both pages being free of external requests, every period in the page data using the same fields, and the Divar collector's parsing and aggregation.
 
 ## Repository layout
 

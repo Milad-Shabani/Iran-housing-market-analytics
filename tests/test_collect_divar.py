@@ -113,3 +113,19 @@ def test_catalog_covers_every_1403_neighbourhood():
     hoods = pd.read_csv(ROOT / "data/raw/divar_1m/tehran_neighborhood_summary.csv")
     assert cat.slug.is_unique and len(cat) >= 400
     assert set(hoods.neighborhood_slug) <= set(cat.slug)
+
+
+def test_dropped_connections_are_retried(monkeypatch):
+    import http.client
+    import io
+    calls = {"n": 0}
+
+    def flaky(req, timeout=None):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise http.client.RemoteDisconnected("Remote end closed connection without response")
+        return io.BytesIO(b'{"posts": []}')
+    monkeypatch.setattr(C.urllib.request, "urlopen", flaky)
+    monkeypatch.setattr(C.time, "sleep", lambda s: None)
+    assert C._http("https://example.invalid", {"x": 1}) == {"posts": []}
+    assert calls["n"] == 2

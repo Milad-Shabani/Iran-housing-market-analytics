@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import http.client
 import json
 import math
 import re
@@ -138,7 +139,7 @@ def _http(url: str, body: dict | None, attempts: int = 4) -> dict:
             req = urllib.request.Request(url, data=data, headers=HEADERS, method="POST" if data else "GET")
             with urllib.request.urlopen(req, timeout=20) as r:  # noqa: S310 - fixed Divar URLs
                 return json.loads(r.read().decode("utf-8"))
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        except (OSError, http.client.HTTPException, json.JSONDecodeError) as exc:   # incl. dropped connections
             if attempt == attempts - 1:
                 raise RuntimeError(f"Divar request failed ({url}): {exc}") from exc
             time.sleep(2 ** attempt * 2)
@@ -191,7 +192,11 @@ def crawl_neighbourhood(city_id: str, category: str, nb, delay: float, budget: l
     while queue and budget[0] > 0:
         box = queue.pop()
         budget[0] -= 1
-        payload = request_viewport(city_id, category, box, zoom_for(box), district_id=str(nb.divar_id))
+        try:
+            payload = request_viewport(city_id, category, box, zoom_for(box), district_id=str(nb.divar_id))
+        except RuntimeError as exc:   # one bad rectangle must not sink the whole collection
+            print(f"skipped a rectangle in {nb.slug}: {exc}", flush=True)
+            continue
         made += 1
         posts = payload.get("posts") or []
         for post in posts:
