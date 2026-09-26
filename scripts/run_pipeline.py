@@ -50,11 +50,14 @@ def main() -> None:
     report["has_1405"] = live is not None
     if live is not None:
         d5, h5, meta5 = live
-        dist = dist.merge(d5[["district", "listings", "ppm2"]].rename(columns={"listings": "listings_1405", "ppm2": "ppm2_1405"}),
-                          on="district", how="left")
-        dist["growth_1405"] = dist.ppm2_1405 / dist.ppm2
-        hoods = hoods.merge(h5[["slug", "listings", "ppm2"]].rename(columns={"listings": "listings_1405", "ppm2": "ppm2_1405"}),
-                            on="slug", how="left")
+        cols5 = ["listings", "ppm2", "ppm2_p25", "ppm2_p75", "price_median", "size_median", "rooms_median",
+                 "build_year", "parking_share", "elevator_share"]
+
+        def suffix(t, key):
+            keep = [c for c in cols5 if c in t.columns]
+            return t[[key] + keep].rename(columns={c: f"{c}_1405" for c in keep})
+        dist = dist.merge(suffix(d5, "district"), on="district", how="left")
+        hoods = hoods.merge(suffix(h5, "slug"), on="slug", how="left")
         report["divar_1405"] = meta5
     report["growth_vs_2021_level_corr"] = float(np.corrcoef(np.log(rel.ppm2_2021), np.log(rel.growth_multiple))[0, 1])
     t21 = lst[lst.location_type == "tehran_district"]

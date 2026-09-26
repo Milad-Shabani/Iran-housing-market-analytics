@@ -135,7 +135,13 @@ tags agreed with the location), and writes counts, medians and quartiles. Distri
 levels are computed exactly like the 1403 figures they are compared with: the listing-weighted
 median of neighbourhood medians (neighbourhoods with 10+ ads); the plain median of all ads is kept
 in `meta.json` as `tehran_median_ppm2_all_ads`. Each run appends one row per district and one for
-Tehran to `snapshots.csv`, which becomes a weekly series when the refresh workflow is on. Rounded map prices move a median
+Tehran to `snapshots.csv`, which becomes a weekly series when the refresh workflow is on.
+
+On the dashboard every figure belongs to one period: c. 1400 (the 3,447-ad sample), 1403 (the 1M-listing
+dataset) or the latest collection, plus the Central Bank and Kilid months. The year bar picks the
+period; an indicator without data for it is shown as missing, never carried over from another year.
+Neighbourhoods that have 1405 ads but no 1403 median (70 in the first collection) appear only on the
+1405 map, at Divar's catalog centroid. Rounded map prices move a median
 by well under 1%.
 
 ## 7. What this project does not do

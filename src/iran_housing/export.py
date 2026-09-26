@@ -25,6 +25,18 @@ def _with_jalali(live: dict | None) -> dict | None:
         return None
     return {**live, "collected_on_jalali": list(gregorian_to_jalali(date.fromisoformat(live["collected_on"])))}
 
+def _period(row, price_keys: dict) -> dict | None:
+    """One period's figures (here 1405) under the same short keys the 1403 fields use."""
+    g = lambda c: getattr(row, f"{c}_1405", np.nan)  # noqa: E731
+    if _r(g("ppm2")) is None:
+        return None
+    out = {k: _r(g(c)) for k, c in price_keys.items()}
+    out.update({"n": _r(g("listings")), "pm": _r(g("price_median")), "sz": _r(g("size_median")),
+                "r": _r(g("rooms_median"), 1), "by": _r(g("build_year")),
+                "el": _r(g("elevator_share"), 3), "pk": _r(g("parking_share"), 3)})
+    return {k: v for k, v in out.items() if v is not None}
+
+
 def _r(x, nd=0):
     if x is None:
         return None
@@ -67,8 +79,9 @@ def tehran_block(hoods: pd.DataFrame, districts: pd.DataFrame) -> dict:
             "rank": _r(row["rank"]), "top": row.top_slug, "low": row.cheapest_slug,
             "p21": _r(row.ppm2_2021), "n21": _r(row.listings_2021), "rel21": bool(row.reliable_2021 == True),  # noqa: E712
             "g": _r(row.growth_multiple, 3),
-            "p5": _r(getattr(row, "ppm2_1405", np.nan)), "n5": _r(getattr(row, "listings_1405", np.nan)),
-            "g5": _r(getattr(row, "growth_1405", np.nan), 3),
+            "y0": {"p": _r(row.ppm2_2021) if row.reliable_2021 == True else None,  # noqa: E712
+                   "n": _r(row.listings_2021)},
+            "y5": _period(row, {"p": "ppm2", "q25": "ppm2_p25", "q75": "ppm2_p75"}),
         })
     pts = []
     for r in hoods.itertuples():
@@ -82,9 +95,31 @@ def tehran_block(hoods: pd.DataFrame, districts: pd.DataFrame) -> dict:
             "sz": _r(r.size_median), "r": _r(r.rooms_median), "by": _r(r.build_year),
             "el": _r(r.elevator_share, 2), "pk": _r(r.parking_share, 2), "st": _r(r.storage_share, 2),
             "rb": _r(r.rebuilt_share, 2), "q": r.quality,
-            "p5": _r(getattr(r, "ppm2_1405", np.nan)), "n5": _r(getattr(r, "listings_1405", np.nan))})
+            "y5": _period(r, {"p": "ppm2", "p25": "ppm2_p25", "p75": "ppm2_p75"})})
+    pts += _hoods_only_in_1405({p["s"] for p in pts}, proj, fa_h)
     return {"w": TEHRAN_W, "h": proj.height(bounds), "districts": out_d, "hoods": pts,
             "median": _r(districts.attrs.get("tehran_median", np.nan)) if hasattr(districts, "attrs") else None}
+
+
+def _hoods_only_in_1405(have: set, proj, fa_h: dict) -> list[dict]:
+    """Neighbourhoods with 1405 ads but no 1403 median, placed at Divar's catalog centroid."""
+    from types import SimpleNamespace
+
+    from .market import load_divar_1405
+    live = load_divar_1405()
+    if live is None or "district" not in live[1]:
+        return []
+    cat = pd.read_csv(GEO / "divar_tehran_neighbourhoods.csv").set_index("slug")
+    out = []
+    for r in live[1].itertuples(index=False):
+        if r.slug in have or r.slug not in cat.index or pd.isna(r.district):
+            continue
+        x, y = proj.xy(cat.at[r.slug, "lon"], cat.at[r.slug, "lat"])
+        row = SimpleNamespace(**{f"{k}_1405": v for k, v in r._asdict().items()})
+        out.append({"s": r.slug, "fa": fa_h.get(r.slug), "en": pretty(r.slug), "x": round(x, 1), "y": round(y, 1),
+                    "d": int(r.district), "n": 0, "p": None, "q": "new_1405",
+                    "y5": _period(row, {"p": "ppm2", "p25": "ppm2_p25", "p75": "ppm2_p75"})})
+    return out
 
 
 def iran_block(provinces: pd.DataFrame, cities: pd.DataFrame) -> dict:

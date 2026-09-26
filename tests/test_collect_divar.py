@@ -66,6 +66,7 @@ def test_aggregate_places_ads_in_districts(tmp_path):
     assert set(d.index) == {1, 16}
     assert d.loc[1, "ppm2"] > d.loc[16, "ppm2"]
     assert d.loc[1, "listings"] == 30
+    assert {"rooms_median", "build_year", "size_median", "price_median"} <= set(d.columns)
 
 
 def test_levels_match_the_1403_method(tmp_path):

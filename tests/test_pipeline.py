@@ -21,7 +21,7 @@ from iran_housing import market as M  # noqa: E402
 from iran_housing import timeseries as T  # noqa: E402
 from iran_housing import valuation as V  # noqa: E402
 from iran_housing.geo import DistrictLocator  # noqa: E402
-from iran_housing.jalali import jalali_to_gregorian  # noqa: E402
+from iran_housing.jalali import gregorian_to_jalali, jalali_to_gregorian  # noqa: E402
 
 
 # ------------------------------------------------------------------ fixtures
@@ -49,6 +49,15 @@ def cbi_log():
                                         (1403, 1, "2024-03-20"), (1404, 1, "2025-03-21"), (1405, 7, "2026-09-23")])
 def test_jalali_month_starts(jy, jm, iso):
     assert jalali_to_gregorian(jy, jm).isoformat() == iso
+
+
+def test_gregorian_to_jalali_round_trips():
+    from datetime import date, timedelta
+    assert gregorian_to_jalali(date(2026, 9, 26)) == (1405, 7, 4)
+    assert gregorian_to_jalali(date(2025, 3, 20)) == (1403, 12, 30)   # leap Esfand
+    for k in range(0, 12000, 7):
+        d = date(2000, 1, 1) + timedelta(k)
+        assert jalali_to_gregorian(*gregorian_to_jalali(d)) == d
 
 
 # ------------------------------------------------------------------ raw data integrity
@@ -191,6 +200,36 @@ def test_dashboard_data_is_complete():
     named = sum(bool(x["fa"]) for x in d["tehran"]["hoods"]) / len(d["tehran"]["hoods"])
     assert named > 0.99  # Persian names for (almost) every neighbourhood; the rest fall back to Latin
     assert len(d["forecast"]["bands"]) == 24
+
+
+def test_every_period_uses_the_same_keys():
+    """The year bar reads one record per period (y0 = c. 1400, the flat fields = 1403, y5 = 1405)."""
+    p = ROOT / "data/processed/dashboard_data.json"
+    if not p.exists():
+        pytest.skip("run scripts/run_pipeline.py first")
+    d = json.loads(p.read_text(encoding="utf-8"))
+    for x in d["tehran"]["districts"]:
+        assert set(x["y0"]) == {"p", "n"}
+        if x["y0"]["p"] is not None:
+            assert x["y0"]["p"] < x["p"]
+        if x.get("y5"):
+            assert {"p", "q25", "q75", "n"} <= set(x["y5"]) and x["y5"]["q25"] <= x["y5"]["p"] <= x["y5"]["q75"]
+    for x in d["tehran"]["hoods"]:
+        if x["q"] == "new_1405":   # neighbourhoods with 1405 ads only: no 1403 figure, a full 1405 record
+            assert x["p"] is None and x["y5"]["p"] > 0
+        if x.get("y5"):
+            assert {"p", "p25", "p75", "n"} <= set(x["y5"])
+    if d["meta"]["has_1405"]:
+        assert d["meta"]["divar_1405"]["collected_on_jalali"][0] >= 1404
+
+
+def test_every_element_the_page_script_uses_exists():
+    app = (ROOT / "dashboard/app.js").read_text(encoding="utf-8")
+    tpl = (ROOT / "dashboard/template.html").read_text(encoding="utf-8")
+    import re
+    ids = set(re.findall(r"\$\('#([A-Za-z][\w-]*)", app))
+    missing = [i for i in ids if f'id="{i}"' not in tpl]
+    assert not missing, missing
 
 
 @pytest.mark.parametrize("page", ["index.html", "index.fa.html"])

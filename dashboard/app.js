@@ -76,6 +76,53 @@ const cbiYoY = t => { const a = MONTHS[t], b = MONTHS[t - 12]; return a && b && 
 const KILID_ROLL = D.forecast.kilid_last / TEH_CITY.p - 1;   // Kilid (1405/05) vs Divar Tehran median (1403)
 const G_LONG = Math.expm1(12 * D.forecast.g_long), G_KIL = Math.expm1(12 * D.forecast.g_kilid);
 
+// ------------------------------------------------------------------ periods (the year bar)
+// Every figure belongs to one period. rec(o, y) returns an object's figures for year y (same
+// short keys in every period) or null, so an indicator without data for that year shows "–".
+const LIVE = D.meta.divar_1405 || null;
+const liveDate = () => {
+  if (!LIVE) return '';
+  const j = LIVE.collected_on_jalali;
+  if (!j) return LIVE.collected_on;
+  return FA ? `${nf(j[2])} ${MFA[j[1] - 1]} ${yr(j[0])}` : `${j[2]} ${MEN[j[1] - 1]} ${j[0]}`;
+};
+const liveGreg = () => LIVE ? new Date(LIVE.collected_on + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '';
+const MAP_YEARS = LIVE ? [1400, 1403, 1405] : [1400, 1403];
+const YEARS = Array.from({ length: 11 }, (_, i) => 1395 + i);
+const PER = {
+  1400: { lab: FA ? 'حدود ۱۴۰۰' : 'c. 1400', src: FA ? `نمونه‌ی ${nf(D.meta.listings_2021)} آگهی دیوار` : `Divar sample, ${nf(D.meta.listings_2021)} ads` },
+  1403: { lab: FA ? '۱۴۰۳' : '1403', src: FA ? `${nf(D.meta.tehran_listings_located)} آگهی دیوار` : `${nf(D.meta.tehran_listings_located)} Divar ads` },
+};
+if (LIVE) PER[1405] = { lab: liveDate(), src: FA ? `${nf(LIVE.ads_used)} آگهی دیوار` : `${nf(LIVE.ads_used)} Divar ads, collected ${liveGreg()}` };
+const pLab = y => PER[y] ? PER[y].lab : yr(y);
+const span2 = (a, b) => FA ? `${pLab(a)} تا ${pLab(b)}` : `${pLab(a)} → ${pLab(b)}`;
+const prevYear = y => { const i = MAP_YEARS.indexOf(y); return i > 0 ? MAP_YEARS[i - 1] : null; };
+function rec(o, y) {
+  if (!o) return null;
+  if (y === 1403) return o.p != null ? o : null;
+  if (y === 1405) return o.y5 || null;
+  if (y === 1400) return o.y0 && o.y0.p != null ? o.y0 : null;
+  return null;
+}
+const val = (o, k, y) => { const r = rec(o, y); return r && r[k] != null ? r[k] : null; };
+const growth = (o, y) => { const b = prevYear(y), a = val(o, 'p', y), c = b ? val(o, 'p', b) : null; return a && c ? a / c : null; };
+function wq(pairs, q = 0.5) {   // listing-weighted quantile, same interpolation as the Python pipeline
+  const v = pairs.filter(([x, w]) => x != null && w > 0).sort((a, b) => a[0] - b[0]);
+  if (!v.length) return null;
+  const tot = v.reduce((s, p) => s + p[1], 0), target = q * tot;
+  let cum = 0, prev = null;
+  for (const [x, w] of v) { const c = cum + w / 2; if (c >= target) return prev ? prev[0] + (x - prev[0]) * (target - prev[1]) / (c - prev[1] || 1) : x; prev = [x, c]; cum += w; }
+  return v[v.length - 1][0];
+}
+const TMED = { 1400: D.meta.tehran_median_2021, 1403: TEHRAN_MED };
+if (LIVE) TMED[1405] = LIVE.tehran_median_ppm2;
+const TYP = {};   // typical listing price and size, listing-weighted over neighbourhoods
+[1403, 1405].forEach(y => { const hs = HOODS.filter(x => rec(x, y)); if (hs.length) TYP[y] = { pm: wq(hs.map(x => [val(x, 'pm', y), val(x, 'n', y)])), sz: wq(hs.map(x => [val(x, 'sz', y), val(x, 'n', y)])) }; });
+const lastIn = (y, k) => MONTHS.filter(m => m.y === y && m[k] != null).pop() || null;
+const noData = y => FA ? `برای ${pLab(y)} داده نداریم` : `no data for ${pLab(y)}`;
+const rankOf = (d, y) => { const v = val(d, 'p', y); return v == null ? null : DIST.filter(o => (val(o, 'p', y) || 0) > v).length + 1; };
+const nRanked = y => DIST.filter(o => val(o, 'p', y) != null).length;
+
 // ------------------------------------------------------------------ colour
 const RAMP = {
   blue: ['#d7e7fb', '#a9cdf5', '#6da7ec', '#3987e5', '#1c5cab', '#0d366b'],
@@ -106,7 +153,8 @@ function showTip(ev, title, rows = [], foot) {
   clear(tip);
   tip.appendChild(h('div', { cls: 't', text: title }));
   for (const r of rows) {
-    const row = h('div', { cls: 'r' });
+    if (r.sep) { tip.appendChild(h('div', { cls: 'sep', text: r.sep === true ? '' : r.sep })); continue; }
+    const row = h('div', { cls: 'r' + (r.b ? ' on' : '') });
     const lab = h('span');
     if (r.c) lab.appendChild(h('i', { cls: 'k', style: `background:${r.c}` }));
     lab.appendChild(document.createTextNode(r.k));
@@ -168,7 +216,7 @@ function zoomable(svgEl, g, box, onZoom) {
 
 // ------------------------------------------------------------------ shared state
 const S = {
-  scope: { type: 'tehran' },
+  scope: { type: 'tehran' }, year: LIVE ? 1405 : 1403,
   tMetric: 'p', tLayer: 'd', budgetOn: false, budget: 8e9, bSize: 75, legendBin: null,
   iMetric: 'p', iCities: false,
   hood: 'saadat-abad', area: 90, rooms: 2, parking: 1, storage: 1, elevator: 1, roll: 0,
@@ -177,10 +225,11 @@ const S = {
 
 // ================================================================== KPI strip
 function kpi(label, value, unit, sub, opts = {}) {
-  const k = h('div', { cls: 'kpi' + (opts.hero ? ' hero-kpi' : '') + (opts.spark ? ' has-spark' : '') });
-  const lab = h('div', { cls: 'lab' }, [h('span', { text: label })]);
-  if (opts.info) lab.appendChild(h('span', { cls: 'info', title: opts.info, text: 'i' }));
-  k.appendChild(lab);
+  const k = h('div', { cls: 'kpi' + (opts.hero ? ' hero-kpi' : '') + (opts.spark ? ' has-spark' : '') + (opts.na ? ' na' : '') });
+  const right = h('span', { cls: 'lab-r' });
+  if (opts.when) right.appendChild(h('span', { cls: 'when', text: opts.when }));
+  if (opts.info) right.appendChild(h('span', { cls: 'info', title: opts.info, text: 'i' }));
+  k.appendChild(h('div', { cls: 'lab' }, [h('span', { text: label }), right]));
   const v = h('div', { cls: 'val' }, [iso(value)]);
   if (unit) { v.appendChild(document.createTextNode(' ')); v.appendChild(h('small', { text: unit })); }
   k.appendChild(v);
@@ -200,48 +249,54 @@ function spark(vals, color = '#2a78d6') {
 function deltaSpan(x, fmt = spct) { return h('span', { cls: x >= 0 ? 'delta-up' : 'delta-dn', text: iso(fmt(x)) }); }
 
 function renderKPIs() {
-  const box = clear($('#kpis')), sc = S.scope;
-  const cbiSpark = spark(MONTHS.filter(m => m.t >= D.series.last_cbi - 36 && m.t <= D.series.last_cbi).map(m => m.cbi));
-  const kilSpark = spark(MONTHS.filter(m => m.kil).map(m => m.kil), '#eb6834');
-  const yoy = cbiYoY(D.series.last_cbi);
-  const common = [
-    kpi(T.k_cbi, Mv(lastCbi.cbi), unitM, h('span', {}, [deltaSpan(yoy), (FA ? ' سالانه · ' : ' y/y · ') + tLabel(lastCbi.t)]), { spark: cbiSpark, info: FA ? 'میانگین قیمت هر متر در معاملات ثبت‌شده‌ی تهران (بانک مرکزی). آخرین ماه منتشرشده.' : 'Mean price per m² of registered Tehran transactions (Central Bank of Iran). Last published month.' }),
-    kpi(T.k_kilid, Mv(lastKil.kil), unitM, h('span', {}, [deltaSpan(lastKil.kil / MONTHS.find(m => m.kil).kil - 1), ' · ' + tLabel(lastKil.t)]), { spark: kilSpark, info: FA ? 'شاخص آگهی کیلید برای کل تهران. قیمت پیشنهادی است، نه معامله.' : "Kilid's Tehran-wide listing indicator. Asking prices, not transactions." }),
-  ];
+  const box = clear($('#kpis')), sc = S.scope, y = S.year, P = pLab(y), py = prevYear(y);
+  const na = (label, why, when = P) => kpi(label, '–', '', why || noData(y), { na: true, when });
+  const c = lastIn(y, 'cbi'), k = lastIn(y, 'kil'), k0 = MONTHS.find(m => m.kil != null);
+  const city = sc.type === 'province' ? (FA ? ' · تهران' : ' · Tehran') : '';
+  const cbiTile = c ? kpi(T.k_cbi + city, Mv(c.cbi), unitM, cbiYoY(c.t) != null ? h('span', {}, [deltaSpan(cbiYoY(c.t)), FA ? ' نسبت به سال قبل' : ' vs a year earlier']) : '',
+      { when: tLabel(c.t), spark: spark(MONTHS.filter(m => m.t > c.t - 36 && m.t <= c.t).map(m => m.cbi)), info: FA ? 'میانگین قیمت هر متر در معاملات ثبت‌شده‌ی تهران (بانک مرکزی)، آخرین ماه منتشرشده‌ی همین سال.' : 'Mean price per m² of registered Tehran transactions (Central Bank of Iran), last published month of this year.' })
+    : na(T.k_cbi + city, FA ? 'بانک مرکزی برای این سال منتشر نکرده' : 'not published for this year', yr(y));
+  const kilTile = k ? kpi(T.k_kilid + city, Mv(k.kil), unitM, k.t > k0.t ? h('span', {}, [deltaSpan(k.kil / k0.kil - 1), (FA ? ' نسبت به ' : ' vs ') + tLabel(k0.t)]) : '',
+      { when: tLabel(k.t), spark: spark(MONTHS.filter(m => m.kil != null && m.t <= k.t).map(m => m.kil), '#eb6834'), info: FA ? 'شاخص آگهی کیلید برای کل تهران، آخرین ماه همین سال. قیمت پیشنهادی است، نه معامله.' : "Kilid's Tehran-wide listing indicator, last month of this year. Asking prices, not transactions." })
+    : na(T.k_kilid + city, FA ? 'کیلید فقط ۱۴۰۴ و ۱۴۰۵ را دارد' : 'Kilid covers 1404–1405 only', yr(y));
+  const chg = (a, b) => (a != null && b != null)
+    ? kpi(T.k_growth, mult(a / b), '', h('span', {}, [deltaSpan(a / b - 1), ` · ${FA ? 'از' : 'from'} ${Mv(b)} ${T.u_m_short}`]), { when: span2(py, y) })
+    : na(T.k_growth, py ? noData(a == null ? y : py) : (FA ? 'دوره‌ی قبلی نداریم' : 'no earlier period'), py ? span2(py, y) : P);
   let tiles = [];
   if (sc.type === 'tehran') {
+    const v = TMED[y], t = TYP[y];
     tiles = [
-      kpi(T.k_ppm2, Mv(TEHRAN_MED), unitM, FA ? `میانه‌ی آگهی‌های ۱۴۰۳ · ${nf(D.meta.tehran_listings_located)} آگهی` : `1403 listings · ${nf(D.meta.tehran_listings_located)} ads`, { hero: true }),
-      kpi(T.k_vsn, mult(TEHRAN_MED / NAT_MED, 1), '', FA ? `میانه‌ی کشور: ${Mv(NAT_MED)} ${unitM}` : `national median: ${Mv(NAT_MED)} ${unitM}`),
-      kpi(T.k_price, Bv(TEH_CITY.pm), unitB, FA ? `متراژ معمول ${nf(TEH_CITY.sz)} متر` : `typical size ${nf(TEH_CITY.sz)} m²`),
-      LIVE ? kpi(liveLabel(), Mv(LIVE.tehran_median_ppm2), unitM, h('span', {}, [deltaSpan(LIVE.tehran_median_ppm2 / TEHRAN_MED - 1), FA ? ` نسبت به ۱۴۰۳ · ${nf(LIVE.ads_used)} آگهی` : ` vs 1403 · ${nf(LIVE.ads_used)} ads`]), { info: FA ? 'میانه‌ی آگهی‌های فروش آپارتمان که همین حالا روی نقشه‌ی دیوار است، به همان روش عدد ۱۴۰۳ (میانه‌ی وزنی میانه‌ی محله‌ها). هر هفته خودکار به‌روز می‌شود.' : 'Median of the apartment-sale ads on Divar\'s map at collection time, computed the same way as the 1403 figure (listing-weighted median of neighbourhood medians). Refreshed weekly.' })
-           : kpi(T.k_growth, mult(TEHRAN_MED / D.meta.tehran_median_2021), '', FA ? `از ${Mv(D.meta.tehran_median_2021)} در حدود ۱۴۰۰` : `from ${Mv(D.meta.tehran_median_2021)} M c. 1400`),
-      ...common];
+      v != null ? kpi(T.k_ppm2, Mv(v), unitM, PER[y].src, { hero: true, when: P }) : na(T.k_ppm2, FA ? 'آگهی تهران برای این سال نداریم' : 'no Tehran listings for this year'),
+      chg(v ?? null, py ? TMED[py] : null),
+      y === 1403 ? kpi(T.k_vsn, mult(v / NAT_MED, 1), '', FA ? `میانه‌ی کشور: ${Mv(NAT_MED)} ${unitM}` : `national median: ${Mv(NAT_MED)} ${unitM}`, { when: P })
+                 : na(T.k_vsn, FA ? 'میانه‌ی کشور فقط برای ۱۴۰۳' : 'national median exists for 1403 only'),
+      t ? kpi(T.k_price, Bv(t.pm), unitB, FA ? `متراژ معمول ${nf(t.sz)} متر` : `typical size ${nf(t.sz)} m²`, { when: P }) : na(T.k_price),
+      cbiTile, kilTile];
   } else if (sc.type === 'district') {
-    const d = DBY[sc.d];
+    const d = DBY[sc.d], r = rec(d, y);
     tiles = [
-      kpi(T.k_ppm2, Mv(d.p), unitM, FA ? `رتبه‌ی ${nf(d.rank)} از ۲۲ · ${nf(d.n)} آگهی` : `rank ${d.rank} of 22 · ${nf(d.n)} ads`, { hero: true }),
-      kpi(T.k_vs, spct(d.vs), '', FA ? `میانه‌ی تهران ${Mv(TEHRAN_MED)}` : `Tehran median ${Mv(TEHRAN_MED)} M`),
-      kpi(T.k_price, Bv(d.pm), unitB, FA ? `متراژ معمول ${nf(d.sz)} متر · ساخت ${yr(d.by)}` : `typical ${nf(d.sz)} m² · built ${d.by}`),
-      (LIVE && d.p5) ? kpi(liveLabel(), Mv(d.p5), unitM, h('span', {}, [deltaSpan(d.g5 - 1), FA ? ` نسبت به ۱۴۰۳ · ${nf(d.n5)} آگهی` : ` vs 1403 · ${nf(d.n5)} ads`])) :
-      kpi(T.k_growth, d.g ? mult(d.g) : T.no_data, '', d.g ? (FA ? `از ${Mv(d.p21)} در حدود ۱۴۰۰ (${nf(d.n21)} آگهی)` : `from ${Mv(d.p21)} M c. 1400 (${nf(d.n21)} ads)`) : (FA ? 'نمونه‌ی قدیمی کمتر از ۱۵ آگهی' : 'older sample under 15 ads')),
-      ...common];
+      r ? kpi(T.k_ppm2, Mv(r.p), unitM, FA ? `رتبه‌ی ${nf(rankOf(d, y))} از ${nf(nRanked(y))} · ${nf(r.n)} آگهی` : `rank ${rankOf(d, y)} of ${nRanked(y)} · ${nf(r.n)} ads`, { hero: true, when: P }) : na(T.k_ppm2),
+      r && TMED[y] ? kpi(T.k_vs, spct(r.p / TMED[y] - 1), '', FA ? `میانه‌ی تهران ${Mv(TMED[y])}` : `Tehran median ${Mv(TMED[y])} M`, { when: P }) : na(T.k_vs),
+      chg(val(d, 'p', y), py ? val(d, 'p', py) : null),
+      r && r.pm ? kpi(T.k_price, Bv(r.pm), unitB, (FA ? `متراژ معمول ${nf(r.sz)} متر` : `typical ${nf(r.sz)} m²`) + (r.by ? (FA ? ` · ساخت ${yr(Math.round(r.by))}` : ` · built ${Math.round(r.by)}`) : ''), { when: P }) : na(T.k_price),
+      cbiTile, kilTile];
   } else if (sc.type === 'hood') {
-    const x = HBY[sc.s], d = DBY[x.d];
+    const x = HBY[sc.s], d = DBY[x.d], r = rec(x, y), dr = rec(d, y);
     tiles = [
-      kpi(T.k_ppm2, Mv(x.p), unitM, FA ? `۵۰٪ میانی ${Mv(x.p25)}–${Mv(x.p75)}` : `middle 50%: ${Mv(x.p25)}–${Mv(x.p75)} M`, { hero: true }),
-      kpi(FA ? 'نسبت به منطقه' : 'vs its district', spct(x.p / d.p - 1), '', FA ? `${distName(x.d)}: ${Mv(d.p)}` : `${distName(x.d)}: ${Mv(d.p)} M`),
-      kpi(T.k_price, Bv(x.pm), unitB, FA ? `متراژ معمول ${nf(x.sz)} متر · ${nf(x.r)} اتاق` : `typical ${nf(x.sz)} m² · ${x.r} bed`),
-      kpi(T.k_year, x.by ? yr(x.by) : '–', '', FA ? `آسانسور ${pct(x.el)} · پارکینگ ${pct(x.pk)}` : `elevator ${pct(x.el)} · parking ${pct(x.pk)}`),
-      ...common];
+      r ? kpi(T.k_ppm2, Mv(r.p), unitM, r.p25 ? (FA ? `۵۰٪ میانی ${Mv(r.p25)}–${Mv(r.p75)} · ${nf(r.n)} آگهی` : `middle 50%: ${Mv(r.p25)}–${Mv(r.p75)} M · ${nf(r.n)} ads`) : '', { hero: true, when: P }) : na(T.k_ppm2),
+      r && dr ? kpi(FA ? 'نسبت به منطقه' : 'vs its district', spct(r.p / dr.p - 1), '', FA ? `${distName(x.d)}: ${Mv(dr.p)}` : `${distName(x.d)}: ${Mv(dr.p)} M`, { when: P }) : na(FA ? 'نسبت به منطقه' : 'vs its district'),
+      chg(val(x, 'p', y), py ? val(x, 'p', py) : null),
+      r && r.pm ? kpi(T.k_price, Bv(r.pm), unitB, (FA ? `متراژ معمول ${nf(r.sz)} متر` : `typical ${nf(r.sz)} m²`) + (r.r != null ? (FA ? ` · ${nf(r.r)} اتاق` : ` · ${r.r} bed`) : ''), { when: P }) : na(T.k_price),
+      cbiTile, kilTile];
   } else if (sc.type === 'province') {
-    const p = PBY[sc.iso];
-    tiles = [
-      kpi(T.k_ppm2, Mv(p.p), unitM, FA ? `رتبه‌ی ${nf(p.rank)} از ۳۱ · ${nf(p.n)} آگهی` : `rank ${p.rank} of 31 · ${nf(p.n)} ads`, { hero: true }),
-      kpi(T.k_vsn, spct(p.vs), '', FA ? `میانه‌ی کشور ${Mv(NAT_MED)}` : `national median ${Mv(NAT_MED)} M`),
-      kpi(T.k_price, Bv(p.pm), unitB, FA ? `متراژ معمول ${nf(p.sz)} متر` : `typical ${nf(p.sz)} m²`),
-      kpi(FA ? 'بزرگ‌ترین بازار استان' : 'Largest market', cityName(CBY[p.big] || { en: p.big }), '', FA ? `${Mv(p.bigp)} ${unitM} · ${pct(p.bigsh)} آگهی‌ها` : `${Mv(p.bigp)} ${unitM} · ${pct(p.bigsh)} of ads`),
-      ...common];
+    const p = PBY[sc.iso], why = FA ? 'داده‌ی استانی فقط برای ۱۴۰۳' : 'province data exist for 1403 only';
+    const big = FA ? 'بزرگ‌ترین بازار استان' : 'Largest market';
+    tiles = (y === 1403 && p.p != null) ? [
+      kpi(T.k_ppm2, Mv(p.p), unitM, FA ? `رتبه‌ی ${nf(p.rank)} از ۳۱ · ${nf(p.n)} آگهی` : `rank ${p.rank} of 31 · ${nf(p.n)} ads`, { hero: true, when: P }),
+      kpi(T.k_vsn, spct(p.vs), '', FA ? `میانه‌ی کشور ${Mv(NAT_MED)}` : `national median ${Mv(NAT_MED)} M`, { when: P }),
+      kpi(T.k_price, Bv(p.pm), unitB, FA ? `متراژ معمول ${nf(p.sz)} متر` : `typical ${nf(p.sz)} m²`, { when: P }),
+      kpi(big, cityName(CBY[p.big] || { en: p.big }), '', FA ? `${Mv(p.bigp)} ${unitM} · ${pct(p.bigsh)} آگهی‌ها` : `${Mv(p.bigp)} ${unitM} · ${pct(p.bigsh)} of ads`, { when: P }),
+      cbiTile, kilTile] : [na(T.k_ppm2, why), na(T.k_vsn, why), na(T.k_price, why), na(big, why), cbiTile, kilTile];
   }
   tiles.forEach(t => box.appendChild(t));
   renderScopeChip();
@@ -254,6 +309,8 @@ function renderScopeChip() {
   if (sc.type === 'province') label = `${T.province} ${provName(PBY[sc.iso])}`;
   c.appendChild(h('span', { text: label }));
   if (sc.type !== 'tehran') c.appendChild(h('button', { title: T.scope_reset, 'aria-label': T.scope_reset, text: '×', onclick: () => setScope({ type: 'tehran' }) }));
+  const w = clear($('#scopeWhen'));
+  w.appendChild(h('span', { text: pLab(S.year) }));
 }
 function setScope(sc) {
   S.scope = sc;
@@ -262,28 +319,17 @@ function setScope(sc) {
 
 // ================================================================== Tehran map
 const T_METRICS = {
-  p: { label: T.m_p, ramp: 'blue', fmt: v => Mv(v) + ' ' + T.u_m_short, legend: v => Mv(v), hood: true },
-  g: { label: T.m_g, ramp: 'orange', fmt: v => mult(v), legend: v => mult(v, 1), hood: false },
-  pm: { label: T.m_pm, ramp: 'blue', fmt: v => Bv(v) + ' ' + unitB, legend: v => Bv(v), hood: true },
-  sz: { label: T.m_sz, ramp: 'teal', fmt: v => nf(v) + ' ' + T.u_sqm, legend: v => nf(v), hood: true },
-  by: { label: T.m_by, ramp: 'teal', fmt: v => yr(Math.round(v)), legend: v => yr(Math.round(v)), hood: true },
-  el: { label: T.m_el, ramp: 'teal', fmt: v => pct(v), legend: v => pct(v), hood: true },
-  pk: { label: T.m_pk, ramp: 'teal', fmt: v => pct(v), legend: v => pct(v), hood: true },
-  n: { label: T.m_n, ramp: 'teal', fmt: v => nf(v), legend: v => nf(v), hood: true },
+  p: { label: T.m_p, ramp: 'blue', fmt: v => Mv(v) + ' ' + T.u_m_short, legend: v => Mv(v) },
+  g: { label: T.m_g, ramp: 'orange', fmt: v => mult(v), legend: v => mult(v, 2) },
+  pm: { label: T.m_pm, ramp: 'blue', fmt: v => Bv(v) + ' ' + unitB, legend: v => Bv(v) },
+  sz: { label: T.m_sz, ramp: 'teal', fmt: v => nf(v) + ' ' + T.u_sqm, legend: v => nf(v) },
+  by: { label: T.m_by, ramp: 'teal', fmt: v => yr(Math.round(v)), legend: v => yr(Math.round(v)) },
+  el: { label: T.m_el, ramp: 'teal', fmt: v => pct(v), legend: v => pct(v) },
+  pk: { label: T.m_pk, ramp: 'teal', fmt: v => pct(v), legend: v => pct(v) },
+  n: { label: T.m_n, ramp: 'teal', fmt: v => nf(v), legend: v => nf(v) },
 };
-if (D.meta.has_1405) {   // optional live layer from scripts/collect_divar.py
-  T_METRICS.p5 = { label: T.m_p5, ramp: 'blue', fmt: v => Mv(v) + ' ' + T.u_m_short, legend: v => Mv(v), hood: true };
-  T_METRICS.g5 = { label: T.m_g5, ramp: 'orange', fmt: v => mult(v), legend: v => mult(v, 2), hood: false };
-}
-const LIVE = D.meta.divar_1405 || null;
-const MONTH_FA = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
-const liveDate = () => {
-  if (!LIVE) return '';
-  const j = LIVE.collected_on_jalali;
-  if (FA) return j ? `${nf(j[2])} ${MONTH_FA[j[1] - 1]} ${yr(j[0])}` : LIVE.collected_on;
-  return new Date(LIVE.collected_on + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-};
-const liveLabel = () => LIVE ? (FA ? `دیوار، ${liveDate()}` : `Divar · ${liveDate()}`) : '';
+const mval = (o, k, y) => k === 'g' ? growth(o, y) : val(o, k, y);
+const mTitle = (m, key, y) => key === 'g' ? `${m.label} · ${prevYear(y) ? span2(prevYear(y), y) : pLab(y)}` : `${m.label} · ${pLab(y)}`;
 const tSvg = $('#tMap');
 tSvg.setAttribute('viewBox', `0 0 ${D.tehran.w} ${D.tehran.h}`);
 const tG = svg('g', {}, tSvg);
@@ -293,8 +339,11 @@ const tZoom = zoomable(tSvg, tG, $('#tMapBox'), k => {
   tLabG.querySelectorAll('text').forEach(t => t.setAttribute('font-size', 11 / Math.pow(k, 0.8)));
 });
 const hoodR = n => 2.2 + Math.sqrt(n) * 0.19;
-function hoodPriceFor(x, size) { const A0 = x.sz || 85; return x.p * A0 * Math.exp(V.b_area * (Math.log(size) - Math.log(A0))); }
-function affordClass(x) { const p = hoodPriceFor(x, S.bSize); return p <= S.budget ? 0 : p <= S.budget * 1.2 ? 1 : 2; }
+function hoodPriceFor(x, size) {
+  const r = rec(x, S.year); if (!r) return null;
+  const A0 = r.sz || x.sz || 85; return r.p * A0 * Math.exp(V.b_area * (Math.log(size) - Math.log(A0)));
+}
+function affordClass(x) { const p = hoodPriceFor(x, S.bSize); return p == null ? null : p <= S.budget ? 0 : p <= S.budget * 1.2 ? 1 : 2; }
 const AFF_COL = ['#0ca30c', '#fab219', '#c9c7bf'];
 
 DIST.forEach(d => {
@@ -306,81 +355,105 @@ DIST.forEach(d => {
   p.addEventListener('keydown', ev => { if (ev.key === 'Enter') setScope({ type: 'district', d: d.d }); });
   text(tLabG, d.lx, d.ly, nf(d.d), 'dlabel');
 });
-HOODS.slice().sort((a, b) => b.n - a.n).forEach(x => {
-  const c = svg('circle', { cx: x.x, cy: x.y, r: hoodR(x.n), 'data-r': hoodR(x.n), class: 'hood' + (x.q === 'outlier_vs_district' ? ' flag' : ''), 'data-s': x.s }, tHoodG);
+HOODS.slice().sort((a, b) => Math.max(b.n, val(b, 'n', 1405) || 0) - Math.max(a.n, val(a, 'n', 1405) || 0)).forEach(x => {
+  const c = svg('circle', { cx: x.x, cy: x.y, r: 3, 'data-r': 3, class: 'hood', 'data-s': x.s }, tHoodG);
   c.addEventListener('pointermove', ev => hoodTip(ev, x));
   c.addEventListener('pointerleave', hideTip);
   c.addEventListener('click', ev => { ev.stopPropagation(); if (!tZoom.moved) setScope({ type: 'hood', s: x.s }); });
 });
+// price per m² in every period, the selected one highlighted: which figure belongs to which time
+const histRows = o => [{ sep: FA ? 'قیمت هر متر در هر دوره' : 'Price per m² by period' }].concat(MAP_YEARS.map(y => {
+  const v = val(o, 'p', y);
+  return { k: pLab(y), v: v != null ? Mv(v) + ' ' + T.u_m_short : '–', b: y === S.year };
+}));
 function distTip(ev, d) {
-  const m = T_METRICS[S.tMetric];
-  const rows = [{ k: T.k_ppm2, v: Mv(d.p) + ' ' + T.u_m_short }, { k: T.k_vs, v: spct(d.vs) }, { k: T.k_growth, v: d.g ? mult(d.g) : '–' },
-    { k: T.k_price, v: Bv(d.pm) + ' ' + unitB }, { k: T.u_list, v: nf(d.n) }];
-  if (d.p5) rows.splice(1, 0, { k: liveLabel(), v: `${Mv(d.p5)} ${T.u_m_short} (${spct(d.g5 - 1)})` });
-  if (!['p', 'g', 'pm', 'n', 'p5', 'g5'].includes(S.tMetric)) rows.unshift({ k: m.label, v: m.fmt(d[S.tMetric]) });
-  showTip(ev, `${distName(d.d)} · ${T.k_rank} ${nf(d.rank)}`, rows);
+  const y = S.year, r = rec(d, y), key = S.tMetric, m = T_METRICS[key], rows = [];
+  if (r) {
+    if (!['p', 'pm', 'n'].includes(key)) rows.push({ k: key === 'g' ? mTitle(m, key, y) : m.label, v: mval(d, key, y) != null ? m.fmt(mval(d, key, y)) : '–' });
+    rows.push({ k: T.k_vs, v: TMED[y] ? spct(r.p / TMED[y] - 1) : '–' });
+    if (r.pm) rows.push({ k: T.k_price, v: Bv(r.pm) + ' ' + unitB });
+    rows.push({ k: T.u_list, v: nf(r.n) });
+  }
+  showTip(ev, `${distName(d.d)} · ${pLab(y)}`, rows.concat(histRows(d)), r ? null : noData(y));
 }
 function hoodTip(ev, x) {
-  const rows = [{ k: T.k_ppm2, v: Mv(x.p) + ' ' + T.u_m_short }, { k: T.tip_iqr, v: `${Mv(x.p25)}–${Mv(x.p75)}` },
-    { k: T.k_price, v: Bv(x.pm) + ' ' + unitB }, { k: T.k_size, v: nf(x.sz) + ' ' + T.u_sqm }, { k: T.u_list, v: nf(x.n) }];
-  if (x.p5) rows.splice(1, 0, { k: liveLabel(), v: `${Mv(x.p5)} ${T.u_m_short} (${spct(x.p5 / x.p - 1)})` });
-  if (S.budgetOn) rows.unshift({ k: `${nf(S.bSize)} ${T.u_sqm}`, v: Bv(hoodPriceFor(x, S.bSize)) + ' ' + unitB, c: AFF_COL[affordClass(x)] });
-  const foot = x.q === 'outlier_vs_district' ? T.tip_flag : x.q === 'thin_sample' ? T.tip_thin : null;
-  showTip(ev, `${hoodName(x)} · ${distName(x.d)}`, rows, foot);
-}
-function tMetricVals(onHoods) {
-  const k = S.tMetric;
-  return onHoods ? HOODS.filter(x => x.q !== 'outlier_vs_district').map(x => x[k]) : DIST.map(d => d[k]);
+  const y = S.year, r = rec(x, y), rows = [];
+  if (r) {
+    if (S.budgetOn) rows.push({ k: `${nf(S.bSize)} ${T.u_sqm}`, v: Bv(hoodPriceFor(x, S.bSize)) + ' ' + unitB, c: AFF_COL[affordClass(x)] });
+    if (r.p25) rows.push({ k: T.tip_iqr, v: `${Mv(r.p25)}–${Mv(r.p75)}` });
+    if (r.pm) rows.push({ k: T.k_price, v: Bv(r.pm) + ' ' + unitB });
+    if (r.sz) rows.push({ k: T.k_size, v: nf(r.sz) + ' ' + T.u_sqm });
+    rows.push({ k: T.u_list, v: nf(r.n) });
+  }
+  const foot = !r ? noData(y) : (y === 1403 && x.q === 'outlier_vs_district') ? T.tip_flag : (y === 1403 && x.q === 'thin_sample') ? T.tip_thin : null;
+  showTip(ev, `${hoodName(x)} · ${distName(x.d)} · ${pLab(y)}`, rows.concat(histRows(x)), foot);
 }
 function renderTehranMap() {
-  const onHoods = S.tLayer === 'h' || S.budgetOn;
-  let key = S.tMetric; if (onHoods && !T_METRICS[key].hood) key = 'p';
-  const m = T_METRICS[key];
-  const scale = makeScale(onHoods ? HOODS.filter(x => x.q !== 'outlier_vs_district').map(x => x[key]) : DIST.map(d => d[key]), RAMP[m.ramp]);
+  const y = S.year, onHoods = S.tLayer === 'h' || S.budgetOn;
+  const key = S.tMetric, m = T_METRICS[key];
+  const shown = onHoods ? HOODS.filter(x => rec(x, y) && !(y === 1403 && x.q === 'outlier_vs_district')) : DIST;
+  const vals = shown.map(o => mval(o, key, y)).filter(v => v != null);
+  const scale = vals.length ? makeScale(vals, RAMP[m.ramp]) : null;
   const sc = S.scope;
   const selD = sc.type === 'district' ? sc.d : sc.type === 'hood' ? HBY[sc.s].d : null;
+  let missing = false;
   tDistG.querySelectorAll('path').forEach(p => {
-    const d = DBY[+p.dataset.d];
-    p.setAttribute('fill', onHoods ? (selD === d.d ? '#e3e1da' : '#efeee9') : scale(d[key]));
+    const d = DBY[+p.dataset.d], v = mval(d, key, y);
+    if (!onHoods && v == null) missing = true;
+    p.setAttribute('fill', onHoods ? (selD === d.d ? '#e3e1da' : '#efeee9') : (scale && v != null ? scale(v) : NODATA));
     p.classList.toggle('sel', selD === d.d);
-    p.classList.toggle('dim', !onHoods && S.legendBin != null && scale.bin(d[key]) !== S.legendBin);
+    p.classList.toggle('dim', !onHoods && scale != null && S.legendBin != null && scale.bin(v) !== S.legendBin);
   });
   tHoodG.style.display = onHoods ? '' : 'none';
   if (onHoods) {
     let nFit = 0;
+    const kz = Math.pow(tZoom.k || 1, 0.75);
     tHoodG.querySelectorAll('circle').forEach(c => {
-      const x = HBY[c.dataset.s];
+      const x = HBY[c.dataset.s], r = rec(x, y), v = mval(x, key, y);
+      c.style.display = r ? '' : 'none';
+      if (!r) return;
+      const rad = hoodR(r.n || 0); c.dataset.r = rad; c.setAttribute('r', rad / kz);
       let col;
-      if (S.budgetOn) { const a = affordClass(x); col = AFF_COL[a]; if (a === 0 && x.q !== 'outlier_vs_district') nFit++; }
-      else col = scale(x[key]);
+      if (S.budgetOn) { const a = affordClass(x); col = AFF_COL[a]; if (a === 0) nFit++; }
+      else { col = scale && v != null ? scale(v) : NODATA; if (v == null) missing = true; }
       c.setAttribute('fill', col);
+      c.classList.toggle('flag', y === 1403 && x.q === 'outlier_vs_district');
       c.classList.toggle('sel', sc.type === 'hood' && sc.s === x.s);
-      const dim = (S.legendBin != null && !S.budgetOn && scale.bin(x[key]) !== S.legendBin) || (!S.budgetOn && selD != null && x.d !== selD);
+      const dim = (scale && S.legendBin != null && !S.budgetOn && scale.bin(v) !== S.legendBin) || (!S.budgetOn && selD != null && x.d !== selD);
       c.setAttribute('opacity', dim ? 0.25 : 1);
     });
-    $('#bCount').textContent = S.budgetOn ? `${nf(nFit)} ${T.afford_count}` : '';
+    $('#bCount').textContent = S.budgetOn ? `${nf(nFit)} ${T.afford_count} · ${pLab(y)}` : '';
   }
-  // labels: dark ink over light fills, white over dark
-  tLabG.querySelectorAll('text').forEach((t, i) => { t.style.display = onHoods ? 'none' : ''; });
-  renderLegend($('#tLegend'), S.budgetOn ? null : scale, m, () => renderTehranMap());
+  tLabG.querySelectorAll('text').forEach(t => { t.style.display = onHoods ? 'none' : ''; });
+  naOverlay($('#tNA'), !vals.length && !S.budgetOn || (S.budgetOn && !shown.length), FA
+    ? `برای ${pLab(y)} داده‌ی منطقه‌ای نداریم. نقشه‌ی تهران برای این دوره‌ها داده دارد:`
+    : `No district data for ${pLab(y)}. The Tehran map has data for:`, MAP_YEARS);
+  renderLegend($('#tLegend'), S.budgetOn ? null : scale, S.budgetOn ? null : { ...m, label: mTitle(m, key, y) }, () => renderTehranMap(), missing);
 }
-function renderLegend(box, scale, m, rerender) {
+function naOverlay(el, on, msg, years) {
+  el.hidden = !on; if (!on) return;
+  clear(el).appendChild(h('p', { text: msg }));
+  el.appendChild(h('div', { cls: 'chips' }, years.map(y => h('button', { cls: 'chip', text: pLab(y), onclick: () => setYear(y) }))));
+}
+function renderLegend(box, scale, m, rerender, missing = false) {
   clear(box);
-  if (!scale) {   // budget legend
-    box.appendChild(h('span', { cls: 'title', text: `${T.budget}: ${Bv(S.budget)} ${unitB} · ${nf(S.bSize)} ${T.u_sqm}` }));
+  if (!scale && m == null) {   // budget legend
+    box.appendChild(h('span', { cls: 'title', text: `${T.budget}: ${Bv(S.budget)} ${unitB} · ${nf(S.bSize)} ${T.u_sqm} · ${pLab(S.year)}` }));
     [T.within, T.stretch, T.beyond].forEach((l, i) => box.appendChild(h('span', { cls: 'bin' }, [h('i', { cls: 'sw', style: `background:${AFF_COL[i]}` }), l])));
     return;
   }
   box.appendChild(h('span', { cls: 'title', text: m.label }));
-  const br = scale.breaks, cols = scale.colors;
-  cols.forEach((c, i) => {
-    const lo = i === 0 ? null : br[i - 1], hi = i < br.length ? br[i] : null;
-    const lab = lo == null ? `< ${m.legend(hi)}` : hi == null ? `≥ ${m.legend(lo)}` : `${m.legend(lo)}–${m.legend(hi)}`;
-    const b = h('span', { cls: 'bin' + (S.legendBin === i ? ' on' : ''), role: 'button', tabindex: 0 }, [h('i', { cls: 'sw', style: `background:${c}` }), iso(lab)]);
-    b.addEventListener('click', () => { S.legendBin = S.legendBin === i ? null : i; rerender(); });
-    box.appendChild(b);
-  });
-  if (S.tMetric === 'g' && box.id === 'tLegend') box.appendChild(h('span', { cls: 'bin' }, [h('i', { cls: 'sw', style: `background:${NODATA}` }), T.no_data]));
+  if (scale) {
+    const br = scale.breaks, cols = scale.colors;
+    cols.forEach((c, i) => {
+      const lo = i === 0 ? null : br[i - 1], hi = i < br.length ? br[i] : null;
+      const lab = lo == null ? `< ${m.legend(hi)}` : hi == null ? `≥ ${m.legend(lo)}` : `${m.legend(lo)}–${m.legend(hi)}`;
+      const b = h('span', { cls: 'bin' + (S.legendBin === i ? ' on' : ''), role: 'button', tabindex: 0 }, [h('i', { cls: 'sw', style: `background:${c}` }), iso(lab)]);
+      b.addEventListener('click', () => { S.legendBin = S.legendBin === i ? null : i; rerender(); });
+      box.appendChild(b);
+    });
+  }
+  if (missing || !scale) box.appendChild(h('span', { cls: 'bin' }, [h('i', { cls: 'sw', style: `background:${NODATA}` }), FA ? 'بدون داده در این دوره' : 'no data for this period']));
 }
 
 // ------------------------------------------------------------------ Tehran side panel
@@ -405,34 +478,40 @@ function barRow(name, value, lo, hi, v, max, onclick, opts = {}) {
 function kvBox(items) { return h('div', { cls: 'kv' }, items.map(([v, l]) => h('div', {}, [h('b', { text: iso(v) }), h('span', { text: l })]))); }
 function highlightDist(d, on) { const p = tDistG.querySelector(`path[data-d="${d}"]`); if (p) p.style.stroke = on ? '#0b0b0b' : ''; if (p) p.style.strokeWidth = on ? '2.2' : ''; }
 function renderTehranSide() {
-  const box = clear($('#tSide')), sc = S.scope;
+  const box = clear($('#tSide')), sc = S.scope, y = S.year, P = pLab(y);
+  const noYear = () => { box.appendChild(h('p', { cls: 'note', text: noData(y) }));
+    box.appendChild(h('div', { cls: 'chips' }, MAP_YEARS.map(v => h('button', { cls: 'chip', text: pLab(v), onclick: () => setYear(v) })))); };
   if (sc.type === 'district' || sc.type === 'hood') {
-    const d = DBY[sc.type === 'district' ? sc.d : HBY[sc.s].d];
-    box.appendChild(h('h3', { text: `${distName(d.d)}` }));
-    box.appendChild(h('p', { cls: 'note', text: FA ? `رتبه‌ی ${nf(d.rank)} از ۲۲ · ${nf(d.nh)} محله · ${nf(d.n)} آگهی` : `Rank ${d.rank} of 22 · ${d.nh} neighbourhoods · ${nf(d.n)} listings` }));
-    box.appendChild(kvBox([[Mv(d.p), T.u_m], [spct(d.vs), T.k_vs], [d.g ? mult(d.g) : '–', T.k_growth]]));
-    box.appendChild(kvBox([[nf(d.sz) + ' ' + T.u_sqm, T.k_size], [yr(Math.round(d.by)), T.k_year], [pct(d.el), T.f_elevator]]));
-    const hs = HOODS.filter(x => x.d === d.d).sort((a, b) => b.p - a.p);
-    const max = Math.max(...hs.map(x => x.p75 || x.p)) * 1.02;
-    box.appendChild(h('div', { cls: 'note', text: FA ? 'محله‌ها: میانه (نقطه) و ۵۰٪ میانی (نوار)، میلیون تومان/متر' : 'Neighbourhoods: median (dot) and middle 50% (band), M toman/m²' }));
+    const d = DBY[sc.type === 'district' ? sc.d : HBY[sc.s].d], r = rec(d, y);
+    box.appendChild(h('h3', {}, [distName(d.d) + ' ', h('span', { cls: 'when', text: P })]));
+    if (!r) { noYear(); return; }
+    const hs = HOODS.filter(x => x.d === d.d && rec(x, y)).sort((a, b) => val(b, 'p', y) - val(a, 'p', y));
+    box.appendChild(h('p', { cls: 'note', text: FA ? `رتبه‌ی ${nf(rankOf(d, y))} از ${nf(nRanked(y))} · ${nf(hs.length)} محله · ${nf(r.n)} آگهی` : `Rank ${rankOf(d, y)} of ${nRanked(y)} · ${hs.length} neighbourhoods · ${nf(r.n)} listings` }));
+    box.appendChild(kvBox([[Mv(r.p), T.u_m], [TMED[y] ? spct(r.p / TMED[y] - 1) : '–', T.k_vs], [growth(d, y) ? mult(growth(d, y)) : '–', prevYear(y) ? span2(prevYear(y), y) : T.k_growth]]));
+    if (r.sz != null) box.appendChild(kvBox([[nf(r.sz) + ' ' + T.u_sqm, T.k_size], [r.by ? yr(Math.round(r.by)) : '–', T.k_year], [r.el != null ? pct(r.el) : '–', T.f_elevator]]));
+    if (!hs.length) return;
+    const max = Math.max(...hs.map(x => val(x, 'p75', y) || val(x, 'p', y))) * 1.02;
+    box.appendChild(h('div', { cls: 'note', text: FA ? `محله‌ها در ${P}: میانه (نقطه) و ۵۰٪ میانی (نوار)، میلیون تومان/متر` : `Neighbourhoods, ${P}: median (dot) and middle 50% (band), M toman/m²` }));
     const list = h('div', { cls: 'barlist' });
-    hs.forEach(x => list.appendChild(barRow(hoodName(x) + (x.q === 'outlier_vs_district' ? ' ⚑' : ''), Mv(x.p), x.p25, x.p75, x.p, max,
-      () => setScope({ type: 'hood', s: x.s }), { sel: sc.type === 'hood' && sc.s === x.s, color: x.q === 'ok' ? '#1c5cab' : '#898781' })));
+    hs.forEach(x => list.appendChild(barRow(hoodName(x) + (y === 1403 && x.q === 'outlier_vs_district' ? ' ⚑' : ''), Mv(val(x, 'p', y)), val(x, 'p25', y), val(x, 'p75', y), val(x, 'p', y), max,
+      () => setScope({ type: 'hood', s: x.s }), { sel: sc.type === 'hood' && sc.s === x.s, color: y !== 1403 || x.q === 'ok' ? '#1c5cab' : '#898781' })));
     box.appendChild(list);
-    const target = sc.type === 'hood' ? HBY[sc.s] : hs.find(x => x.q === 'ok') || hs[0];
+    const target = sc.type === 'hood' && rec(HBY[sc.s], y) ? HBY[sc.s] : hs[0];
     box.appendChild(h('div', { style: 'margin-top:12px;display:flex;gap:8px;flex-wrap:wrap' }, [
       h('button', { cls: 'chip on', text: (FA ? 'قیمت‌گذاری خانه در ' : 'Price a home in ') + hoodName(target), onclick: () => { pickHood(target.s); location.hash = '#pricing'; } })]));
     return;
   }
-  box.appendChild(h('h3', { text: T.tehran_all }));
-  box.appendChild(h('p', { cls: 'note', text: FA ? `۲۲ منطقه · ${nf(HOODS.length)} محله روی نقشه · ${nf(D.meta.tehran_listings_located)} آگهی` : `22 districts · ${HOODS.length} neighbourhoods on the map · ${nf(D.meta.tehran_listings_located)} listings` }));
-  const m = T_METRICS[S.tMetric];
-  const ds = DIST.slice().sort((a, b) => (b[S.tMetric] ?? -1) - (a[S.tMetric] ?? -1));
-  const max = Math.max(...ds.map(d => d[S.tMetric] || 0)) * 1.02;
-  box.appendChild(h('div', { cls: 'note', text: m.label + (['p'].includes(S.tMetric) ? ` (${T.u_m})` : S.tMetric === 'pm' ? ` (${unitB})` : '') }));
+  box.appendChild(h('h3', {}, [T.tehran_all + ' ', h('span', { cls: 'when', text: P })]));
+  if (!PER[y] || !MAP_YEARS.includes(y)) { noYear(); return; }
+  const nh = HOODS.filter(x => rec(x, y)).length;
+  box.appendChild(h('p', { cls: 'note', text: FA ? `۲۲ منطقه${nh ? ` · ${nf(nh)} محله` : ''} · ${PER[y].src}` : `22 districts${nh ? ` · ${nh} neighbourhoods` : ''} · ${PER[y].src}` }));
+  const key = S.tMetric, m = T_METRICS[key];
+  const ds = DIST.slice().sort((a, b) => (mval(b, key, y) ?? -1) - (mval(a, key, y) ?? -1));
+  const max = Math.max(...ds.map(d => mval(d, key, y) || 0)) * 1.02;
+  box.appendChild(h('div', { cls: 'note', text: mTitle(m, key, y) + (key === 'p' ? ` (${T.u_m})` : key === 'pm' ? ` (${unitB})` : '') }));
   const list = h('div', { cls: 'barlist' });
-  ds.forEach(d => list.appendChild(barRow(distName(d.d), d[S.tMetric] != null ? m.legend(d[S.tMetric]) : '–', null, null, d[S.tMetric] || 0, max,
-    () => setScope({ type: 'district', d: d.d }), { hover: on => highlightDist(d.d, on), color: RAMP[m.ramp][4] })));
+  ds.forEach(d => { const v = mval(d, key, y); list.appendChild(barRow(distName(d.d), v != null ? m.legend(v) : '–', null, null, v || 0, max,
+    () => setScope({ type: 'district', d: d.d }), { hover: on => highlightDist(d.d, on), color: RAMP[m.ramp][4] })); });
   box.appendChild(list);
 }
 
@@ -458,10 +537,11 @@ function logTicks(lo, hi) {
 
 // ------------------------------------------------------------------ district dumbbell (price ladder)
 function renderRank() {
-  const el = $('#tRank');
-  const ds = DIST.slice().sort((a, b) => b.p - a.p);
+  const el = $('#tRank'), y = S.year, py = prevYear(y);
+  if (!nRanked(y)) { clear(el).appendChild(h('p', { cls: 'note', text: noData(y) })); return; }
+  const ds = DIST.slice().sort((a, b) => (val(b, 'p', y) ?? -1) - (val(a, 'p', y) ?? -1));
   const rowH = 17, f = frame(el, 560, ds.length * rowH + 40, { l: 70, r: 20, t: 14, b: 26 });
-  const max = Math.max(...ds.map(d => d.q75)) * 1.05;
+  const max = Math.max(...ds.map(d => Math.max(val(d, 'q75', y) || 0, val(d, 'p', y) || 0, py ? val(d, 'p', py) || 0 : 0))) * 1.05;
   const X = v => f.m.l + v / max * f.iw;
   niceTicks(0, max / 1e6, 5).forEach(t => {
     svg('line', { x1: X(t * 1e6), x2: X(t * 1e6), y1: f.m.t - 4, y2: f.h - f.m.b, class: 'gridl' }, f.s);
@@ -469,83 +549,94 @@ function renderRank() {
   });
   const sel = S.scope.type === 'district' ? S.scope.d : S.scope.type === 'hood' ? HBY[S.scope.s].d : null;
   ds.forEach((d, i) => {
-    const y = f.m.t + i * rowH + rowH / 2;
+    const yy = f.m.t + i * rowH + rowH / 2, v = val(d, 'p', y), v0 = py ? val(d, 'p', py) : null;
     const g = svg('g', { style: 'cursor:pointer' }, f.s);
-    svg('rect', { x: 0, y: y - rowH / 2, width: f.w, height: rowH, fill: sel === d.d ? '#eef5fd' : 'transparent' }, g);
-    text(g, f.m.l - 8, y + 4, distName(d.d), 'clabel' + (sel === d.d ? ' b' : ''), { 'text-anchor': 'end' });
-    svg('line', { x1: X(d.q25), x2: X(d.q75), y1: y, y2: y, stroke: '#cfe0f7', 'stroke-width': 6, 'stroke-linecap': 'round' }, g);
-    if (d.p21 && d.rel21) {
-      svg('line', { x1: X(d.p21), x2: X(d.p), y1: y, y2: y, stroke: '#9c9a92', 'stroke-width': 1.2 }, g);
-      svg('circle', { cx: X(d.p21), cy: y, r: 4, fill: '#fff', stroke: '#eb6834', 'stroke-width': 1.8 }, g);
+    svg('rect', { x: 0, y: yy - rowH / 2, width: f.w, height: rowH, fill: sel === d.d ? '#eef5fd' : 'transparent' }, g);
+    text(g, f.m.l - 8, yy + 4, distName(d.d), 'clabel' + (sel === d.d ? ' b' : ''), { 'text-anchor': 'end' });
+    if (val(d, 'q25', y)) svg('line', { x1: X(val(d, 'q25', y)), x2: X(val(d, 'q75', y)), y1: yy, y2: yy, stroke: '#cfe0f7', 'stroke-width': 6, 'stroke-linecap': 'round' }, g);
+    if (v != null && v0 != null) {
+      svg('line', { x1: X(v0), x2: X(v), y1: yy, y2: yy, stroke: '#9c9a92', 'stroke-width': 1.2 }, g);
+      svg('circle', { cx: X(v0), cy: yy, r: 4, fill: '#fff', stroke: '#eb6834', 'stroke-width': 1.8 }, g);
     }
-    svg('circle', { cx: X(d.p), cy: y, r: 4.6, fill: '#1c5cab', stroke: '#fff', 'stroke-width': 1.5 }, g);
-    g.addEventListener('pointermove', ev => showTip(ev, distName(d.d), [
-      { k: FA ? '۱۴۰۳ (میانه)' : '1403 median', v: Mv(d.p) + ' ' + T.u_m_short, c: '#1c5cab' },
-      { k: T.tip_iqr, v: `${Mv(d.q25)}–${Mv(d.q75)}` },
-      { k: FA ? 'حدود ۱۴۰۰' : 'c. 1400', v: d.rel21 ? Mv(d.p21) + ' ' + T.u_m_short : T.no_data, c: '#eb6834' },
-      { k: T.k_growth, v: d.g ? mult(d.g) : '–' }]));
+    if (v != null) svg('circle', { cx: X(v), cy: yy, r: 4.6, fill: '#1c5cab', stroke: '#fff', 'stroke-width': 1.5 }, g);
+    else text(g, f.m.l + 4, yy + 4, '–', 'clabel');
+    const rows = [{ k: pLab(y), v: v != null ? Mv(v) + ' ' + T.u_m_short : '–', c: '#1c5cab', b: true }];
+    if (val(d, 'q25', y)) rows.push({ k: T.tip_iqr, v: `${Mv(val(d, 'q25', y))}–${Mv(val(d, 'q75', y))}` });
+    if (py) rows.push({ k: pLab(py), v: v0 != null ? Mv(v0) + ' ' + T.u_m_short : T.no_data, c: '#eb6834' }, { k: span2(py, y), v: v && v0 ? mult(v / v0) : '–' });
+    g.addEventListener('pointermove', ev => showTip(ev, distName(d.d), rows));
     g.addEventListener('pointerleave', hideTip);
     g.addEventListener('pointerenter', () => highlightDist(d.d, true));
     g.addEventListener('pointerout', () => highlightDist(d.d, false));
     g.addEventListener('click', () => setScope({ type: 'district', d: d.d }));
   });
-  const key = h('div', { cls: 'keyrow' }, [
-    h('span', {}, [h('i', { style: 'background:#1c5cab;width:9px;height:9px;border-radius:50%' }), FA ? '۱۴۰۳ (دیوار، ۹۱ هزار آگهی)' : '1403 (Divar, 91k ads)']),
-    h('span', {}, [h('i', { style: 'background:#fff;border:2px solid #eb6834;width:9px;height:9px;border-radius:50%' }), FA ? 'حدود ۱۴۰۰ (۳٬۴۴۷ آگهی)' : 'c. 1400 (3,447 ads)']),
-    h('span', {}, [h('i', { cls: 'box', style: 'background:#cfe0f7' }), FA ? '۵۰٪ میانی محله‌ها' : 'middle 50% of neighbourhoods'])]);
-  el.insertBefore(key, el.firstChild);
-  const axisLab = h('div', { cls: 'note', style: 'text-align:center;margin:0', text: T.u_m });
-  el.appendChild(axisLab);
+  const keys = [h('span', {}, [h('i', { style: 'background:#1c5cab;width:9px;height:9px;border-radius:50%' }), `${pLab(y)} (${PER[y].src})`])];
+  if (py) keys.push(h('span', {}, [h('i', { style: 'background:#fff;border:2px solid #eb6834;width:9px;height:9px;border-radius:50%' }), `${pLab(py)} (${PER[py].src})`]));
+  if (DIST.some(d => val(d, 'q25', y))) keys.push(h('span', {}, [h('i', { cls: 'box', style: 'background:#cfe0f7' }), FA ? `۵۰٪ میانی محله‌ها (${pLab(y)})` : `middle 50% of neighbourhoods (${pLab(y)})`]));
+  el.insertBefore(h('div', { cls: 'keyrow' }, keys), el.firstChild);
+  el.appendChild(h('div', { cls: 'note', style: 'text-align:center;margin:0', text: T.u_m }));
 }
 
 // ------------------------------------------------------------------ catch-up scatter
 function renderCatch() {
-  const el = $('#tCatch');
-  const ds = DIST.filter(d => d.g);
+  const el = $('#tCatch'), y = S.year, py = prevYear(y);
+  const ds = py ? DIST.filter(d => growth(d, y)) : [];
+  const title = $('#catchTitle'), desc = $('#catchDesc');
+  if (ds.length < 5) {
+    title.textContent = FA ? 'کدام منطقه‌ها سریع‌تر گران شدند؟' : 'Which districts rose faster?';
+    desc.textContent = FA ? 'این نمودار دو دوره‌ی پشت سر هم لازم دارد. در نوار زمان ۱۴۰۳ یا ۱۴۰۵ را انتخاب کنید.' : 'This chart needs two consecutive periods. Pick 1403 or the latest year on the year bar.';
+    clear(el).appendChild(h('div', { cls: 'chips' }, MAP_YEARS.filter(prevYear).map(v => h('button', { cls: 'chip', text: pLab(v), onclick: () => setYear(v) }))));
+    return;
+  }
+  const xs = ds.map(d => val(d, 'p', py) / 1e6), ys = ds.map(d => growth(d, y));
+  const lx = xs.map(Math.log), ly = ys.map(Math.log), mx = lx.reduce((a, b) => a + b) / lx.length, my = ly.reduce((a, b) => a + b) / ly.length;
+  const sxy = lx.reduce((s, v, i) => s + (v - mx) * (ly[i] - my), 0), sxx = lx.reduce((s, v) => s + (v - mx) ** 2, 0), syy = ly.reduce((s, v) => s + (v - my) ** 2, 0);
+  const corr = sxy / Math.sqrt(sxx * syy), b = sxy / sxx, a = my - b * mx;
+  title.textContent = corr <= -0.3 ? (FA ? `منطقه‌های ارزان‌تر سریع‌تر گران شدند (${span2(py, y)})` : `Cheaper districts rose faster (${span2(py, y)})`)
+    : corr >= 0.3 ? (FA ? `منطقه‌های گران‌تر سریع‌تر گران شدند (${span2(py, y)})` : `Pricier districts rose faster (${span2(py, y)})`)
+    : (FA ? `رشد به سطح قیمت ربط روشنی ندارد (${span2(py, y)})` : `Growth barely tracks the price level (${span2(py, y)})`);
+  desc.textContent = FA ? `قیمت هر متر در ${pLab(py)} (محور افقی) در برابر چند برابر شدن آن تا ${pLab(y)} (محور عمودی).` + (py === 1400 ? ' منطقه‌هایی با کمتر از ۱۵ آگهی در نمونه‌ی قدیمی کنار گذاشته شده‌اند.' : '')
+    : `Price per m² in ${pLab(py)} (x) against how many times it multiplied by ${pLab(y)} (y).` + (py === 1400 ? ' Districts with fewer than 15 ads in the older sample are left out.' : '');
   const f = frame(el, 560, 360, { l: 46, r: 16, t: 14, b: 42 });
-  const xs = ds.map(d => d.p21 / 1e6), ys = ds.map(d => d.g);
-  const x0 = 10, x1 = Math.max(...xs) * 1.08, y0 = Math.min(...ys) * 0.92, y1 = Math.max(...ys) * 1.06;
+  const x0 = Math.min(...xs) * 0.8, x1 = Math.max(...xs) * 1.08, y0 = Math.min(...ys) * 0.92, y1 = Math.max(...ys) * 1.06;
   const X = v => f.m.l + (Math.log(v) - Math.log(x0)) / (Math.log(x1) - Math.log(x0)) * f.iw;
   const Y = v => f.m.t + (1 - (v - y0) / (y1 - y0)) * f.ih;
-  logTicks(x0, x1).forEach(t => { svg('line', { x1: X(t), x2: X(t), y1: f.m.t, y2: f.m.t + f.ih, class: 'gridl' }, f.s); text(f.s, X(t), f.h - 24, nf(t), 'axis', { 'text-anchor': 'middle', 'font-size': 11, fill: '#898781' }); });
+  const lt = logTicks(x0, x1); (lt.length >= 2 ? lt : niceTicks(x0, x1, 4)).forEach(t => { svg('line', { x1: X(t), x2: X(t), y1: f.m.t, y2: f.m.t + f.ih, class: 'gridl' }, f.s); text(f.s, X(t), f.h - 24, nf(t), 'axis', { 'text-anchor': 'middle', 'font-size': 11, fill: '#898781' }); });
   niceTicks(y0, y1, 5).forEach(t => { svg('line', { x1: f.m.l, x2: f.m.l + f.iw, y1: Y(t), y2: Y(t), class: 'gridl' }, f.s); text(f.s, f.m.l - 6, Y(t) + 4, '×' + nf(t, 1), 'axis', { 'text-anchor': 'end', 'font-size': 11, fill: '#898781' }); });
-  text(f.s, f.m.l + f.iw / 2, f.h - 6, FA ? 'قیمت هر متر در حدود ۱۴۰۰ (میلیون تومان، مقیاس لگاریتمی)' : 'Price per m² c. 1400 (M toman, log scale)', 'clabel', { 'text-anchor': 'middle' });
-  // least-squares fit on logs
-  const lx = xs.map(Math.log), ly = ys.map(Math.log), mx = lx.reduce((a, b) => a + b) / lx.length, my = ly.reduce((a, b) => a + b) / ly.length;
-  const b = lx.reduce((s, v, i) => s + (v - mx) * (ly[i] - my), 0) / lx.reduce((s, v) => s + (v - mx) ** 2, 0), a = my - b * mx;
+  text(f.s, f.m.l + f.iw / 2, f.h - 6, FA ? `قیمت هر متر در ${pLab(py)} (میلیون تومان، مقیاس لگاریتمی)` : `Price per m² in ${pLab(py)} (M toman, log scale)`, 'clabel', { 'text-anchor': 'middle' });
   const fx = [Math.min(...xs), Math.max(...xs)];
   svg('path', { d: `M${X(fx[0])},${Y(Math.exp(a + b * Math.log(fx[0])))}L${X(fx[1])},${Y(Math.exp(a + b * Math.log(fx[1])))}`, stroke: '#eb6834', 'stroke-width': 1.5, fill: 'none', opacity: .8 }, f.s);
   const sel = S.scope.type === 'district' ? S.scope.d : S.scope.type === 'hood' ? HBY[S.scope.s].d : null;
   ds.forEach(d => {
     const g = svg('g', { style: 'cursor:pointer' }, f.s);
-    const cx = X(d.p21 / 1e6), cy = Y(d.g);
+    const cx = X(val(d, 'p', py) / 1e6), cy = Y(growth(d, y));
     svg('circle', { cx, cy, r: 12, fill: 'transparent' }, g);
     svg('circle', { cx, cy, r: sel === d.d ? 7.5 : 6, fill: sel === d.d ? '#0d366b' : '#3987e5', stroke: '#fff', 'stroke-width': 2 }, g);
     text(g, cx + 9, cy + 4, nf(d.d), 'clabel' + (sel === d.d ? ' b' : ''));
-    g.addEventListener('pointermove', ev => showTip(ev, distName(d.d), [{ k: FA ? 'حدود ۱۴۰۰' : 'c. 1400', v: Mv(d.p21) + ' ' + T.u_m_short }, { k: '1403', v: Mv(d.p) + ' ' + T.u_m_short }, { k: T.k_growth, v: mult(d.g) }]));
+    g.addEventListener('pointermove', ev => showTip(ev, distName(d.d), [{ k: pLab(py), v: Mv(val(d, 'p', py)) + ' ' + T.u_m_short }, { k: pLab(y), v: Mv(val(d, 'p', y)) + ' ' + T.u_m_short }, { k: span2(py, y), v: mult(growth(d, y)) }]));
     g.addEventListener('pointerleave', hideTip);
     g.addEventListener('click', () => setScope({ type: 'district', d: d.d }));
   });
-  text(f.s, f.m.l + f.iw - 4, f.m.t + 12, (FA ? 'همبستگی ' : 'correlation ') + nf(D.meta.growth_corr, 2), 'clabel b', { 'text-anchor': 'end' });
+  text(f.s, f.m.l + f.iw - 4, f.m.t + 12, (FA ? 'همبستگی ' : 'correlation ') + nf(corr, 2), 'clabel b', { 'text-anchor': 'end' });
 }
 
 // ================================================================== pricing tool
-const hoodList = HOODS.filter(x => x.q === 'ok' || x.q === 'thin_sample').sort((a, b) => a.d - b.d || b.p - a.p);
+const hoodListFor = y => HOODS.filter(x => rec(x, y) && (y !== 1403 || x.q === 'ok' || x.q === 'thin_sample')).sort((a, b) => a.d - b.d || val(b, 'p', y) - val(a, 'p', y));
 function fillHoodSelect(filter = '') {
-  const sel = clear($('#vHood')), f = filter.trim().toLowerCase();
+  const sel = clear($('#vHood')), f = filter.trim().toLowerCase(), y = S.year;
   let lastD = null, grp = null;
-  hoodList.forEach(x => {
+  hoodListFor(y).forEach(x => {
     if (f && !(x.en.toLowerCase().includes(f) || (x.fa || '').includes(filter.trim()) || x.s.includes(f) || String(x.d) === f)) return;
     if (x.d !== lastD) { grp = h('optgroup', { label: distName(x.d) }); sel.appendChild(grp); lastD = x.d; }
-    grp.appendChild(h('option', { value: x.s, text: `${hoodName(x)} — ${Mv(x.p)} ${T.u_m_short}` }));
+    grp.appendChild(h('option', { value: x.s, text: `${hoodName(x)} — ${Mv(val(x, 'p', y))} ${T.u_m_short}` }));
   });
   sel.value = S.hood;
 }
 function pickHood(s) { S.hood = s; $('#vSearch').value = ''; fillHoodSelect(); renderValuation(); }
 function estimate() {
-  const x = HBY[S.hood];
-  const A0 = x.sz || 85, R0 = x.r ?? 2, p0 = x.pk ?? .7, s0 = x.st ?? .85, e0 = x.el ?? .7;
-  const base = x.p * A0;
+  const x = HBY[S.hood], r = rec(x, S.year);
+  if (!r) return null;
+  const A0 = r.sz || x.sz || 85, R0 = r.r ?? x.r ?? 2, p0 = r.pk ?? x.pk ?? .7, s0 = x.st ?? .85, e0 = r.el ?? x.el ?? .7;
+  const base = r.p * A0;
   const steps = [
     ['adj_area', V.b_area * (Math.log(S.area) - Math.log(A0))],
     ['adj_rooms', V.b_rooms * (S.rooms - R0)],
@@ -556,35 +647,45 @@ function estimate() {
   const logAdj = steps.reduce((s, [, v]) => s + v, 0);
   const roll = 1 + S.roll / 100;
   const price = base * Math.exp(logAdj) * roll;
-  return { x, base, steps, price, roll, lo: price * V.interval.q10, hi: price * V.interval.q90, q25: price * V.interval.q25, q75: price * V.interval.q75, ppm2: price / S.area };
+  return { x, r, A0, base, steps, price, roll, lo: price * V.interval.q10, hi: price * V.interval.q90, q25: price * V.interval.q25, q75: price * V.interval.q75, ppm2: price / S.area };
 }
 function renderValuation() {
-  const e = estimate(), x = e.x, out = clear($('#vOut'));
+  const e = estimate(), out = clear($('#vOut')), y = S.year, P = pLab(y);
   $('#vAreaOut').textContent = `${nf(S.area)} ${T.u_sqm}`;
-  $('#vRollOut').textContent = S.roll ? spct(S.roll / 100) : (FA ? 'قیمت‌های ۱۴۰۳' : '1403 prices');
+  $('#vRollOut').textContent = S.roll ? spct(S.roll / 100) : (FA ? `قیمت‌های ${P}` : `${P} prices`);
+  if (!e) {
+    const x = HBY[S.hood];
+    out.appendChild(h('h3', {}, [`${hoodName(x)}, ${distName(x.d)} `, h('span', { cls: 'when', text: P })]));
+    out.appendChild(h('p', { cls: 'note', text: FA ? `برای ${P} قیمت این محله را نداریم. دوره‌ای را انتخاب کنید که داده دارد:` : `No price for this neighbourhood in ${P}. Pick a period that has one:` }));
+    out.appendChild(h('div', { cls: 'chips' }, MAP_YEARS.filter(v => rec(x, v)).map(v => h('button', { cls: 'chip', text: pLab(v), onclick: () => setYear(v) }))));
+    clear($('#vLeft'));
+    return;
+  }
+  const x = e.x, r = e.r;
   const card = h('div', { cls: 'estimate' });
-  card.appendChild(h('div', { cls: 'note', style: 'margin:0', text: `${T.est_title} · ${hoodName(x)}, ${distName(x.d)}` }));
+  card.appendChild(h('div', { cls: 'note', style: 'margin:0' }, [`${T.est_title} · ${hoodName(x)}, ${distName(x.d)} `, h('span', { cls: 'when', text: S.roll ? `${P} ${spct(S.roll / 100)}` : P })]));
   card.appendChild(h('div', { cls: 'big' }, [iso(Bv(e.price)), ' ', h('small', { text: unitB })]));
   card.appendChild(h('div', { cls: 'range' }, [T.est_range + ': ', h('b', { text: iso(`${Bv(e.lo)}–${Bv(e.hi)}`) }), ' ' + unitB]));
   card.appendChild(h('div', { cls: 'range' }, [h('b', { text: iso(Mv(e.ppm2)) }), ` ${unitM} (${T.est_ppm2})`]));
-  if (x.q === 'thin_sample') card.appendChild(h('div', { cls: 'note', style: 'margin:6px 0 0', text: '⚠ ' + T.tip_thin }));
+  if (y === 1403 && x.q === 'thin_sample') card.appendChild(h('div', { cls: 'note', style: 'margin:6px 0 0', text: '⚠ ' + T.tip_thin }));
   out.appendChild(card);
 
   // position strip inside neighbourhood distribution
   out.appendChild(h('h3', { style: 'margin-top:16px', text: T.est_pos }));
   const pos = h('div', { cls: 'chart' }); out.appendChild(pos);
   const f = frame(pos, 560, 70, { l: 12, r: 12, t: 18, b: 20 });
-  const lo = Math.min(x.p25, e.ppm2 / e.roll, x.p) * 0.8, hi = Math.max(x.p75, e.ppm2 / e.roll, x.p) * 1.2;
+  const q1 = r.p25 || r.p, q3 = r.p75 || r.p;
+  const lo = Math.min(q1, e.ppm2 / e.roll, r.p) * 0.8, hi = Math.max(q3, e.ppm2 / e.roll, r.p) * 1.2;
   const lo2 = Math.min(lo, e.ppm2) , hi2 = Math.max(hi, e.ppm2 * 1.05);
   const X = v => f.m.l + (v - lo2) / (hi2 - lo2) * f.iw;
   svg('line', { x1: f.m.l, x2: f.m.l + f.iw, y1: 36, y2: 36, stroke: '#e1e0d9', 'stroke-width': 8, 'stroke-linecap': 'round' }, f.s);
-  svg('line', { x1: X(x.p25 * e.roll), x2: X(x.p75 * e.roll), y1: 36, y2: 36, stroke: '#a9cdf5', 'stroke-width': 8, 'stroke-linecap': 'round' }, f.s);
-  svg('line', { x1: X(x.p * e.roll), x2: X(x.p * e.roll), y1: 28, y2: 44, stroke: '#1c5cab', 'stroke-width': 2 }, f.s);
+  svg('line', { x1: X(q1 * e.roll), x2: X(q3 * e.roll), y1: 36, y2: 36, stroke: '#a9cdf5', 'stroke-width': 8, 'stroke-linecap': 'round' }, f.s);
+  svg('line', { x1: X(r.p * e.roll), x2: X(r.p * e.roll), y1: 28, y2: 44, stroke: '#1c5cab', 'stroke-width': 2 }, f.s);
   svg('circle', { cx: X(e.ppm2), cy: 36, r: 7, fill: '#eb6834', stroke: '#fff', 'stroke-width': 2 }, f.s);
   text(f.s, X(e.ppm2), 14, (FA ? 'این خانه ' : 'this home ') + Mv(e.ppm2), 'clabel b', { 'text-anchor': 'middle' });
-  text(f.s, X(x.p25 * e.roll), 62, Mv(x.p25 * e.roll), 'clabel', { 'text-anchor': 'middle' });
-  text(f.s, X(x.p75 * e.roll), 62, Mv(x.p75 * e.roll), 'clabel', { 'text-anchor': 'middle' });
-  out.appendChild(h('div', { cls: 'keyrow' }, [h('span', {}, [h('i', { cls: 'box', style: 'background:#a9cdf5' }), `${T.tip_iqr} (${hoodName(x)})`]), h('span', {}, [h('i', { style: 'background:#1c5cab;width:2px;height:12px' }), FA ? 'میانه‌ی محله' : 'neighbourhood median']), h('span', {}, [h('i', { style: 'background:#eb6834;width:9px;height:9px;border-radius:50%' }), FA ? 'این خانه' : 'this home'])]));
+  text(f.s, X(q1 * e.roll), 62, Mv(q1 * e.roll), 'clabel', { 'text-anchor': 'middle' });
+  text(f.s, X(q3 * e.roll), 62, Mv(q3 * e.roll), 'clabel', { 'text-anchor': 'middle' });
+  out.appendChild(h('div', { cls: 'keyrow' }, [h('span', {}, [h('i', { cls: 'box', style: 'background:#a9cdf5' }), `${T.tip_iqr} (${hoodName(x)}, ${P})`]), h('span', {}, [h('i', { style: 'background:#1c5cab;width:2px;height:12px' }), FA ? 'میانه‌ی محله' : 'neighbourhood median']), h('span', {}, [h('i', { style: 'background:#eb6834;width:9px;height:9px;border-radius:50%' }), FA ? 'این خانه' : 'this home'])]));
 
   // waterfall
   out.appendChild(h('h3', { style: 'margin-top:14px', text: T.est_breakdown }));
@@ -599,7 +700,7 @@ function renderValuation() {
   const WX = v => g.m.l + v / vmax * g.iw;
   items.forEach(([k, v, start], i) => {
     const y = g.m.t + i * rh;
-    const lab = k === 'base_typ' ? `${T.base_typ} (${nf(x.sz)} ${T.u_sqm})` : T[k];
+    const lab = k === 'base_typ' ? `${T.base_typ} (${nf(e.A0)} ${T.u_sqm})` : T[k];
     text(g.s, g.m.l - 8, y + rh / 2 + 4, lab, 'clabel' + (k === 'result' ? ' b' : ''), { 'text-anchor': 'end' });
     let x0, x1, col;
     if (start == null) { x0 = WX(0); x1 = WX(v); col = k === 'result' ? '#eb6834' : '#3987e5'; }
@@ -610,15 +711,15 @@ function renderValuation() {
   });
 
   // alternatives + same money elsewhere
-  const alt = HOODS.filter(o => o.q === 'ok' && o.d !== x.d && Math.abs(o.p / x.p - 1) < 0.07).sort((a, b) => b.n - a.n).slice(0, 8);
+  const alt = hoodListFor(y).filter(o => o.d !== x.d && Math.abs(val(o, 'p', y) / r.p - 1) < 0.07).sort((a, b) => val(b, 'n', y) - val(a, 'n', y)).slice(0, 8);
   out.appendChild(h('h3', { style: 'margin-top:14px', text: T.est_alt }));
-  out.appendChild(h('div', { cls: 'chips' }, alt.map(o => h('button', { cls: 'chip', text: `${hoodName(o)} · ${nf(o.d)}`, title: `${Mv(o.p)} ${unitM}`, onclick: () => pickHood(o.s) }))));
+  out.appendChild(h('div', { cls: 'chips' }, alt.map(o => h('button', { cls: 'chip', text: `${hoodName(o)} · ${nf(o.d)}`, title: `${Mv(val(o, 'p', y))} ${unitM} · ${P}`, onclick: () => pickHood(o.s) }))));
   const left = clear($('#vLeft'));
   left.appendChild(h('h3', { text: T.est_buy }));
-  left.appendChild(h('p', { cls: 'note', text: FA ? `با ${Bv(e.price)} میلیارد تومان، به قیمت میانه‌ی هر منطقه چند متر می‌شود خرید` : `What ${Bv(e.price)} B toman buys at each district's median price per m²` }));
+  left.appendChild(h('p', { cls: 'note', text: FA ? `با ${Bv(e.price)} میلیارد تومان، به قیمت میانه‌ی هر منطقه در ${P} چند متر می‌شود خرید` : `What ${Bv(e.price)} B toman buys at each district's median price per m² in ${P}` }));
   const buy = h('div', { cls: 'barlist', style: 'max-height:none' }); left.appendChild(buy);
-  const ref = [1, 3, 2, 6, 5, 22, 4, 10, 16, 18].map(d => DBY[d]).sort((a, b) => a.p - b.p);
-  const sqm = ref.map(d => e.price / (d.p * e.roll)); const mx = Math.max(...sqm) * 1.05;
+  const ref = [1, 3, 2, 6, 5, 22, 4, 10, 16, 18].map(d => DBY[d]).filter(d => rec(d, y)).sort((a, b) => val(a, 'p', y) - val(b, 'p', y));
+  const sqm = ref.map(d => e.price / (val(d, 'p', y) * e.roll)); const mx = Math.max(...sqm) * 1.05;
   ref.forEach((d, i) => buy.appendChild(barRow(distName(d.d), `${nf(sqm[i])} ${T.u_sqm}`, null, null, sqm[i], mx, () => setScope({ type: 'district', d: d.d }), { color: d.d === x.d ? '#eb6834' : '#86b6ef' })));
 }
 function initValuation() {
@@ -635,9 +736,10 @@ function initValuation() {
   renderRollChips();
 }
 function renderRollChips() {
-  const box = clear($('#vRollChips')), kil = Math.round(KILID_ROLL * 100);
-  [[0, FA ? 'قیمت‌های ۱۴۰۳' : '1403 prices'], [kil, (FA ? 'کیلید مرداد ۱۴۰۵: ' : 'Kilid, Mordad 1405: ') + spct(KILID_ROLL)]].forEach(([v, l]) =>
-    box.appendChild(h('button', { cls: 'chip' + (S.roll === v ? ' on' : ''), text: l, onclick: () => { S.roll = v; $('#vRoll').value = v; renderRollChips(); renderValuation(); } })));
+  const box = clear($('#vRollChips')), kil = Math.round(KILID_ROLL * 100), P = pLab(S.year);
+  const opts = [[0, FA ? `قیمت‌های ${P}` : `${P} prices`]];
+  if (S.year === 1403) opts.push([kil, (FA ? 'کیلید مرداد ۱۴۰۵: ' : 'Kilid, Mordad 1405: ') + spct(KILID_ROLL)]);
+  opts.forEach(([v, l]) => box.appendChild(h('button', { cls: 'chip' + (S.roll === v ? ' on' : ''), text: l, onclick: () => { S.roll = v; $('#vRoll').value = v; renderRollChips(); renderValuation(); } })));
 }
 function seg(el, cb) {
   el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
@@ -670,7 +772,7 @@ PROV.forEach(p => {
 });
 CITIES.slice().sort((a, b) => b.n - a.n).forEach(c => {
   const e = svg('circle', { cx: c.x, cy: c.y, r: cityR(c.n), 'data-r': cityR(c.n), class: 'city' }, iCityG);
-  e.addEventListener('pointermove', ev => showTip(ev, cityName(c) + ' · ' + provName(PBY[c.iso]), [
+  e.addEventListener('pointermove', ev => showTip(ev, cityName(c) + ' · ' + provName(PBY[c.iso]) + ' · ' + pLab(1403), [
     { k: T.k_ppm2, v: Mv(c.p) + ' ' + T.u_m_short }, { k: T.k_price, v: Bv(c.pm) + ' ' + unitB }, { k: T.k_size, v: nf(c.sz) + ' ' + T.u_sqm }, { k: T.u_list, v: nf(c.n) }],
     c.exact ? null : (FA ? 'موقعیت: مرکز شهرستان' : 'Placed at its county centre')));
   e.addEventListener('pointerleave', hideTip);
@@ -678,40 +780,50 @@ CITIES.slice().sort((a, b) => b.n - a.n).forEach(c => {
 });
 PROV.filter(p => p.p != null).forEach(p => { const t = text(iLabG, p.lx, p.ly, provName(p), 'dlabel'); t.setAttribute('font-size', 10.5); t.setAttribute('font-weight', 600); });
 function provTip(ev, p) {
-  showTip(ev, provName(p) + (p.rank ? ` · ${T.k_rank} ${nf(p.rank)}` : ''), [
+  const ok = S.year === 1403;
+  showTip(ev, provName(p) + ' · ' + pLab(1403) + (p.rank ? ` · ${T.k_rank} ${nf(p.rank)}` : ''), [
     { k: T.k_ppm2, v: Mv(p.p) + ' ' + T.u_m_short }, { k: T.k_vsn, v: spct(p.vs) }, { k: T.k_price, v: Bv(p.pm) + ' ' + unitB },
-    { k: T.k_size, v: nf(p.sz) + ' ' + T.u_sqm }, { k: (FA ? 'شهر · آگهی' : 'cities · ads'), v: `${nf(p.c)} · ${nf(p.n)}` }]);
+    { k: T.k_size, v: nf(p.sz) + ' ' + T.u_sqm }, { k: (FA ? 'شهر · آگهی' : 'cities · ads'), v: `${nf(p.c)} · ${nf(p.n)}` }],
+    ok ? null : (FA ? `برای ${pLab(S.year)} داده‌ی استانی نداریم؛ این عددها مال ۱۴۰۳ است.` : `No province data for ${pLab(S.year)}; these figures are for 1403.`));
 }
 let iLegendBin = null;
 function renderIranMap() {
-  const m = I_METRICS[S.iMetric];
+  const m = I_METRICS[S.iMetric], ok = S.year === 1403;
   const sc = makeScale(PROV.map(p => p[S.iMetric]), RAMP[m.ramp]);
   const cityScale = makeScale(CITIES.map(c => c.p), RAMP.blue);
   const sel = S.scope.type === 'province' ? S.scope.iso : null;
   iProvG.querySelectorAll('path').forEach(e => {
     const p = PBY[e.dataset.iso];
-    e.setAttribute('fill', S.iCities ? '#efeee9' : sc(p[S.iMetric]));
+    e.setAttribute('fill', !ok ? NODATA : S.iCities ? '#efeee9' : sc(p[S.iMetric]));
     if (S.iCities && sel === p.iso) e.setAttribute('fill', '#e3e1da');
     e.classList.toggle('sel', sel === p.iso);
     e.classList.toggle('dim', !S.iCities && iLegendBin != null && sc.bin(p[S.iMetric]) !== iLegendBin);
   });
-  iCityG.style.display = S.iCities ? '' : 'none';
+  iCityG.style.display = S.iCities && ok ? '' : 'none';
   iCityG.querySelectorAll('circle').forEach((e, i) => {
     const c = CITIES.slice().sort((a, b) => b.n - a.n)[i];
     e.setAttribute('fill', cityScale(c.p));
     e.setAttribute('opacity', (sel && c.iso !== sel) || (iLegendBin != null && S.iCities && cityScale.bin(c.p) !== iLegendBin) ? 0.2 : 1);
   });
-  iLabG.querySelectorAll('text').forEach(t => t.style.display = S.iCities ? 'none' : '');
+  iLabG.querySelectorAll('text').forEach(t => t.style.display = S.iCities && ok ? 'none' : '');
   const box = $('#iLegend');
-  if (S.iCities) { const save = S.legendBin; S.legendBin = iLegendBin; renderLegend(box, cityScale, { label: FA ? 'قیمت هر متر در شهرها (دایره: تعداد آگهی)' : 'City price per m² (bubble = listings)', legend: v => Mv(v) }, () => {}); S.legendBin = save; }
-  else { const save = S.legendBin; S.legendBin = iLegendBin; renderLegend(box, sc, m, () => {}); S.legendBin = save; }
+  naOverlay($('#iNA'), !ok, FA ? `برای ${pLab(S.year)} داده‌ی استانی نداریم. نقشه‌ی ایران فقط برای ۱۴۰۳ داده دارد:` : `No province data for ${pLab(S.year)}. The Iran map has data for:`, [1403]);
+  if (!ok) { renderLegend(box, null, { label: `${m.label} · ${pLab(S.year)}` }, () => {}, true); return; }
+  if (S.iCities) { const save = S.legendBin; S.legendBin = iLegendBin; renderLegend(box, cityScale, { label: (FA ? 'قیمت هر متر در شهرها (دایره: تعداد آگهی)' : 'City price per m² (bubble = listings)') + ' · ' + pLab(1403), legend: v => Mv(v) }, () => {}); S.legendBin = save; }
+  else { const save = S.legendBin; S.legendBin = iLegendBin; renderLegend(box, sc, { ...m, label: `${m.label} · ${pLab(1403)}` }, () => {}); S.legendBin = save; }
   box.querySelectorAll('.bin[role=button]').forEach((b, i) => b.addEventListener('click', () => { iLegendBin = iLegendBin === i ? null : i; renderIranMap(); }));
 }
 function renderIranSide() {
   const box = clear($('#iSide')), sc = S.scope;
+  if (S.year !== 1403) {
+    box.appendChild(h('h3', {}, [(sc.type === 'province' ? `${T.province} ${provName(PBY[sc.iso])}` : T.iran_all) + ' ', h('span', { cls: 'when', text: pLab(S.year) })]));
+    box.appendChild(h('p', { cls: 'note', text: FA ? 'داده‌ی استان‌ها و شهرها فقط برای ۱۴۰۳ موجود است.' : 'Province and city data exist for 1403 only.' }));
+    box.appendChild(h('button', { cls: 'chip on', text: FA ? 'نمایش ۱۴۰۳' : 'Show 1403', onclick: () => setYear(1403) }));
+    return;
+  }
   if (sc.type === 'province') {
     const p = PBY[sc.iso];
-    box.appendChild(h('h3', { text: `${T.province} ${provName(p)}` }));
+    box.appendChild(h('h3', {}, [`${T.province} ${provName(p)} `, h('span', { cls: 'when', text: pLab(1403) })]));
     box.appendChild(h('p', { cls: 'note', text: FA ? `رتبه‌ی ${nf(p.rank)} از ۳۱ · ${nf(p.c)} شهر · ${nf(p.n)} آگهی` : `Rank ${p.rank} of 31 · ${p.c} cities · ${nf(p.n)} listings` }));
     box.appendChild(kvBox([[Mv(p.p), T.u_m], [spct(p.vs), T.k_vsn], [Bv(p.pm), unitB]]));
     const cs = CITIES.filter(c => c.iso === p.iso).sort((a, b) => b.p - a.p);
@@ -722,7 +834,7 @@ function renderIranSide() {
     box.appendChild(list);
     return;
   }
-  box.appendChild(h('h3', { text: T.iran_all }));
+  box.appendChild(h('h3', {}, [T.iran_all + ' ', h('span', { cls: 'when', text: pLab(1403) })]));
   box.appendChild(h('p', { cls: 'note', text: FA ? `میانه‌ی کشور ${Mv(NAT_MED)} ${unitM} · ${nf(D.meta.listings_2024_total)} آگهی در ${nf(D.meta.cities_2024)} شهر` : `National median ${Mv(NAT_MED)} ${unitM} · ${nf(D.meta.listings_2024_total)} ads in ${D.meta.cities_2024} cities` }));
   const m = I_METRICS[S.iMetric];
   const ps = PROV.filter(p => p[S.iMetric] != null).sort((a, b) => b[S.iMetric] - a[S.iMetric]);
@@ -745,6 +857,13 @@ function lineChart(el, cfg) {
   yt.forEach(t => { svg('line', { x1: f.m.l, x2: f.m.l + f.iw, y1: Y(t), y2: Y(t), class: 'gridl' }, f.s); text(f.s, f.m.l - 7, Y(t) + 4, cfg.yFmt(t), 'axis', { 'text-anchor': 'end', 'font-size': 11, fill: '#898781' }); });
   (cfg.xTicks || []).forEach(t => { svg('line', { x1: X(t), x2: X(t), y1: f.m.t + f.ih, y2: f.m.t + f.ih + 4, stroke: '#c3c2b7' }, f.s); text(f.s, X(t), f.h - 12, cfg.xFmt(t), 'axis', { 'text-anchor': 'middle', 'font-size': 11, fill: '#898781' }); });
   svg('line', { x1: f.m.l, x2: f.m.l + f.iw, y1: f.m.t + f.ih, y2: f.m.t + f.ih, stroke: '#c3c2b7' }, f.s);
+  if (cfg.hl) {
+    const a = Math.max(cfg.xMin, cfg.hl.x0), b = Math.min(cfg.xMax, cfg.hl.x1);
+    if (b > a) {
+      svg('rect', { x: X(a), y: f.m.t, width: X(b) - X(a), height: f.ih, fill: '#2a78d6', opacity: .08 }, f.s);
+      text(f.s, (X(a) + X(b)) / 2, f.m.t + f.ih - 6, cfg.hl.label, 'clabel b', { 'text-anchor': 'middle', fill: '#1c5cab' });
+    }
+  }
   (cfg.vlines || []).forEach(v => { svg('line', { x1: X(v.x), x2: X(v.x), y1: f.m.t, y2: f.m.t + f.ih, stroke: '#c3c2b7', 'stroke-width': 1 }, f.s); text(f.s, X(v.x) + 4, f.m.t + 10, v.label, 'clabel', {}); });
   (cfg.bands || []).forEach(b => {
     const top = b.pts.map(p => `${X(p[0])},${Y(p[2])}`), bot = b.pts.slice().reverse().map(p => `${X(p[0])},${Y(p[1])}`);
@@ -845,6 +964,7 @@ function renderForecast() {
     yFmt: v => Mv(v, 0), xTicks: years, xFmt: t => yr(1395 + t / 12),
     bands: [{ color: '#eb6834', opacity: .16, pts: b80 }, { color: '#eb6834', opacity: .22, pts: b50 }],
     vlines: [{ x: todayT, label: FA ? 'امروز' : 'today' }],
+    hl: { x0: (S.year - 1395) * 12, x1: (S.year - 1395) * 12 + 12, label: pLab(S.year) },
     series: [
       { id: 'cbi', color: '#2a78d6', pts: cbiPts },
       { id: 'off', color: '#2a78d6', pts: offPts, dash: '5 4', width: 1.6 },
@@ -918,7 +1038,7 @@ function renderYoY() {
   svg('line', { x1: f.m.l, x2: f.m.l + f.iw, y1: Y(0), y2: Y(0), stroke: '#c3c2b7' }, f.s);
   const bw = Math.max(2, f.iw / (t1 - t0 + 1) - 1.5);
   pts.forEach(([t, v]) => {
-    const r = svg('rect', { x: X(t), y: Math.min(Y(v), Y(0)), width: bw, height: Math.abs(Y(v) - Y(0)), rx: 1.5, fill: '#3987e5' }, f.s);
+    const r = svg('rect', { x: X(t), y: Math.min(Y(v), Y(0)), width: bw, height: Math.abs(Y(v) - Y(0)), rx: 1.5, fill: tJ(t)[0] === S.year ? '#0d366b' : '#a9cdf5' }, f.s);
     r.addEventListener('pointermove', ev => showTip(ev, tLabel(t), [{ k: FA ? 'تغییر سالانه' : 'year on year', v: spct(v) }, { k: T.cbi, v: Mv(MONTHS[t].cbi) + ' ' + T.u_m_short }]));
     r.addEventListener('pointerleave', hideTip);
   });
@@ -1019,17 +1139,68 @@ function renderData() {
 function renderPills() {
   const box = clear($('#pills'));
   const items = FA ? [
-    [nf(D.meta.listings_2024_total), 'آگهی دیوار، ۴۲۰ شهر'], [nf(D.meta.tehran_listings_located), 'آگهی تهران روی نقشه'], [nf(D.meta.listings_2021), 'آگهی تک‌به‌تک برای مدل'],
-    ...(LIVE ? [[nf(LIVE.ads_used), `آگهی تازه‌ی تهران، ${liveDate()}`]] : []),
-    ['۹۱', 'ماه قیمت رسمی بانک مرکزی'], ['۱۲', 'ماه شاخص کیلید'], ['۰', 'کتابخانه‌ی خارجی']]
-    : [[nf(D.meta.listings_2024_total), 'Divar ads, 420 cities'], [nf(D.meta.tehran_listings_located), 'Tehran ads on the map'], [nf(D.meta.listings_2021), 'individual ads for the model'],
-      ...(LIVE ? [[nf(LIVE.ads_used), `fresh Tehran ads, ${liveDate()}`]] : []),
-      ['91', 'months of Central Bank prices'], ['12', 'months of Kilid indicator'], ['0', 'external libraries']];
+    [nf(D.meta.listings_2024_total), 'آگهی دیوار در ۴۲۰ شهر، ۱۴۰۳'],
+    ...(LIVE ? [[nf(LIVE.ads_used), `آگهی تهران، ${liveDate()}`]] : []),
+    [nf(D.meta.listings_2021), 'آگهی تک‌به‌تک، حدود ۱۴۰۰'],
+    ['۹۱', 'ماه قیمت رسمی، ۱۳۹۵ تا ۱۴۰۳'], ['۱۲', 'ماه شاخص کیلید، ۱۴۰۴ تا ۱۴۰۵']]
+    : [[nf(D.meta.listings_2024_total), 'Divar ads in 420 cities, 1403'],
+      ...(LIVE ? [[nf(LIVE.ads_used), `Tehran ads, ${liveDate()}`]] : []),
+      [nf(D.meta.listings_2021), 'individual ads, c. 1400'],
+      ['91', 'months of official prices, 1395–1403'], ['12', 'months of Kilid, 1404–1405']];
   items.forEach(([v, l]) => box.appendChild(h('span', { cls: 'pill' }, [h('b', { text: iso(v) }), ' ' + l])));
+}
+
+// ================================================================== year bar
+let playT = null;
+function renderYearBar() {
+  const yb = clear($('#ybYears')), y = S.year;
+  const has = v => ({ t: MAP_YEARS.includes(v), i: v === 1403, c: !!lastIn(v, 'cbi'), k: !!lastIn(v, 'kil') });
+  YEARS.forEach(v => {
+    const a = has(v);
+    yb.appendChild(h('button', { cls: 'yb-y' + (v === y ? ' on' : '') + (a.t ? ' map' : ''), 'aria-pressed': v === y ? 'true' : 'false', onclick: () => { stopPlay(); setYear(v); } }, [
+      h('b', { text: yr(v) }), h('span', { cls: 'yb-dots' }, ['t', 'i', 'c', 'k'].filter(k => a[k]).map(k => h('i', { cls: 'yb-dot ' + k })))]));
+  });
+  centerYear();
+  const c = lastIn(y, 'cbi'), k = lastIn(y, 'kil');
+  const item = (cls, name, v) => h('span', { cls: 'yb-s' + (v ? '' : ' off') }, [h('i', { cls: 'yb-dot ' + cls }), name + ': ', h('b', { text: v || (FA ? 'ندارد' : 'none') })]);
+  const st = clear($('#ybStatus'));
+  [item('t', FA ? 'نقشه‌ی تهران' : 'Tehran map', MAP_YEARS.includes(y) ? `${pLab(y)} · ${PER[y].src}` : null),
+   item('i', FA ? 'استان‌ها' : 'Provinces', y === 1403 ? pLab(1403) : null),
+   item('c', FA ? 'بانک مرکزی' : 'Central Bank', c ? tLabel(c.t) : null),
+   item('k', FA ? 'کیلید' : 'Kilid', k ? tLabel(k.t) : null)].forEach(e => st.appendChild(e));
+}
+function centerYear() {   // keep the selected year in view when the bar scrolls (phones)
+  const yb = $('#ybYears'), on = yb.querySelector('.on');
+  if (!on || yb.scrollWidth <= yb.clientWidth) return;
+  const a = on.getBoundingClientRect(), b = yb.getBoundingClientRect();
+  yb.scrollLeft += (a.left + a.width / 2) - (b.left + b.width / 2);
+}
+function stopPlay() { if (playT) { clearInterval(playT); playT = null; } $('#ybPlay').textContent = '▶'; $('#ybPlay').setAttribute('aria-pressed', 'false'); }
+function togglePlay() {
+  if (playT) { stopPlay(); return; }
+  let i = YEARS.indexOf(S.year); if (i >= YEARS.length - 1) i = -1;
+  $('#ybPlay').textContent = '❚❚'; $('#ybPlay').setAttribute('aria-pressed', 'true');
+  const step = () => { i++; if (i >= YEARS.length) { stopPlay(); return; } setYear(YEARS[i]); };
+  step(); playT = setInterval(step, 1400);
+}
+function setYear(y) {
+  if (!YEARS.includes(y)) return;
+  S.year = y; S.legendBin = null; iLegendBin = null;
+  if (S.roll) { S.roll = 0; $('#vRoll').value = 0; }
+  renderYearBar(); renderKPIs(); renderTehranMap(); renderTehranSide(); renderRank(); renderCatch();
+  fillHoodSelect($('#vSearch').value); renderRollChips(); renderValuation(); renderIranMap(); renderIranSide(); renderForecast(); renderYoY();
 }
 
 // ================================================================== wiring
 function initControls() {
+  $('#ybPlay').addEventListener('click', togglePlay);
+  $('#ybYears').addEventListener('keydown', ev => {
+    const back = FA ? 'ArrowRight' : 'ArrowLeft', fwd = FA ? 'ArrowLeft' : 'ArrowRight';
+    if (ev.key !== back && ev.key !== fwd) return;
+    ev.preventDefault(); stopPlay();
+    const i = YEARS.indexOf(S.year) + (ev.key === fwd ? 1 : -1);
+    if (i >= 0 && i < YEARS.length) { setYear(YEARS[i]); $('#ybYears .on').focus(); }
+  });
   const tm = $('#tMetric');
   Object.entries(T_METRICS).forEach(([k, m]) => tm.appendChild(h('option', { value: k, text: m.label })));
   tm.addEventListener('change', ev => { S.tMetric = ev.target.value; S.legendBin = null; renderTehranMap(); renderTehranSide(); });
@@ -1059,7 +1230,9 @@ function initControls() {
 }
 
 function boot() {
-  initControls(); initValuation(); renderPills();
+  initControls(); initValuation(); renderPills(); renderYearBar();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(centerYear);
+  addEventListener('resize', centerYear);
   renderKPIs(); renderTehranMap(); renderTehranSide(); renderRank(); renderCatch();
   renderValuation(); renderIranMap(); renderIranSide(); renderMajor(); renderSat();
   renderForecast(); renderLeaderboard(); renderYoY(); renderModel(); renderData();

@@ -275,7 +275,7 @@ def aggregate(raw_path: Path, out_dir: Path | None = None) -> None:
     import numpy as np
     import pandas as pd
 
-
+    from iran_housing.jalali import gregorian_to_jalali
     ads = pd.read_csv(raw_path)
     n0 = len(ads)
     ads = ads.dropna(subset=["lat", "lon", "price_per_m2_toman", "size_m2"])
@@ -315,11 +315,16 @@ def aggregate(raw_path: Path, out_dir: Path | None = None) -> None:
     ads["slug"] = np.where(ok, tag.to_numpy(), nearest)
     tag_agreement = float(ok.mean()) if len(ads) else 0.0
 
+    jy = gregorian_to_jalali(date.fromisoformat(str(ads.collected_on.iloc[0])))[0] \
+        if "collected_on" in ads and len(ads) else gregorian_to_jalali(date.today())[0]
+
     def summarise(g):
+        col = lambda c: pd.to_numeric(g[c], errors="coerce") if c in g else pd.Series(dtype=float)  # noqa: E731
         return pd.Series({"listings": len(g), "ppm2": g.price_per_m2_toman.median(),
                           "ppm2_p25": g.price_per_m2_toman.quantile(.25),
                           "ppm2_p75": g.price_per_m2_toman.quantile(.75),
                           "size_median": g.size_m2.median(), "price_median": g.price_toman.median(),
+                          "rooms_median": col("rooms").median(), "build_year": jy - col("age_years").median(),
                           "parking_share": g.parking.mean(), "elevator_share": g.elevator.mean()})
 
     out = Path(out_dir) if out_dir else OUT

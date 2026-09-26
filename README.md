@@ -4,7 +4,7 @@
 
 [![Live dashboard](https://img.shields.io/badge/live-dashboard-2a78d6?style=flat-square)](https://milad-shabani.github.io/Iran-housing-market-analytics/)
 [![Persian edition](https://img.shields.io/badge/نسخه-فارسی-0d366b?style=flat-square)](https://milad-shabani.github.io/Iran-housing-market-analytics/index.fa.html)
-[![Tests](https://img.shields.io/badge/tests-44%20passing-1baf7a?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-47%20passing-1baf7a?style=flat-square)](#tests)
 [![Dependencies](https://img.shields.io/badge/dashboard%20dependencies-none-52514e?style=flat-square)](#how-it-is-built)
 [![License](https://img.shields.io/badge/code-MIT-666?style=flat-square)](LICENSE)
 
@@ -16,13 +16,14 @@
 
 | | |
 |---|---|
-| **Tehran map** | 22 municipal districts coloured by 8 indicators (price per m², growth, typical price, size, build year, elevator and parking share, sample size). Drop to 332 neighbourhoods, zoom and pan, or enter a budget and see which neighbourhoods fit. |
+| **Year bar** | Pick any year from 1395 to 1405, or press play. Every tile, map, list and chart switches to that year; an indicator with no data for it shows "–" and says why. Each figure carries a badge naming the period it belongs to (c. 1400, 1403, 4 Mehr 1405, Mordad 1403 …), and the bar lists which sources exist for the chosen year. |
+| **Tehran map** | 22 municipal districts coloured by 8 indicators (price per m², change from the previous period, typical price, size, build year, elevator and parking share, sample size). Drop to 402 neighbourhoods, zoom and pan, or enter a budget and see which neighbourhoods fit. |
 | **Price a home** | Pick a neighbourhood, set size, bedrooms, parking, storage and elevator. The estimate comes with an 80% range, a step-by-step breakdown, where it sits in the neighbourhood's price distribution, and what the same money buys in other districts. |
 | **Iran map** | 31 provinces and 349 cities, from 514,282 real listings. Click a province to see its cities. |
 | **Trend & forecast** | The Central Bank's monthly Tehran series (1395–1403), Kilid's listing indicator (1404–1405), and a 12-month outlook whose method and band widths come from a rolling-origin backtest. Change the growth assumption and watch the fan move. |
 | **Model** | Cross-validated accuracy, what each feature is worth, predicted vs listed price. |
 
-Every tile and chart follows the selection: click District 3 and the KPIs, the side panel, the ranking and the scatter all switch to District 3.
+Every tile and chart follows the selection: click District 3 and the KPIs, the side panel, the ranking and the scatter all switch to District 3, for the year on the year bar.
 
 <table>
 <tr><td width="50%"><img src="docs/assets/neighbourhoods_en.png" alt="District 1 at neighbourhood level"><br><sub>Neighbourhood level: each dot is a neighbourhood at Divar's median listing location, sized by listings.</sub></td>
@@ -97,7 +98,7 @@ data/raw  ──►  src/iran_housing  ──►  data/processed  ──►  das
 pip install -r requirements.txt
 python scripts/run_pipeline.py      # clean, locate, summarise, model, forecast -> data/processed/
 python scripts/build_dashboard.py   # -> site/index.html and site/index.fa.html
-pytest -q                           # 44 tests
+pytest -q                           # 47 tests
 ```
 
 `make all` does the same. To refresh or audit the raw layer from the upstream files: `python scripts/fetch_sources.py --check`, then `python scripts/prepare_geo.py`.
@@ -120,7 +121,7 @@ elevator flags, coordinates and a rounded price; rectangles with more ads are sp
 ad is returned, and each ad keeps the neighbourhood Divar assigns it. Individual
 ads stay in `data/local/` (git-ignored). Only neighbourhood and district medians are written to
 `data/raw/divar_1405/`. With them the dashboard gains a *Price per m² (1405)* indicator, a
-*Change 1403 → 1405* indicator and a 1405 KPI tile; without them the page is unchanged.
+1405 stop on the year bar (the default view); without them the bar ends at 1403's data.
 The first full collection (4 Mehr 1405, 26 Sep 2026) returned 172,178 ads, 170,356 of which
 passed the filters; Divar's neighbourhood tag agreed with the ad's location for 99.9% of them.
 Tehran came to 262 M toman/m², against 94.1 M in 1403 by the same method (×2.8).
@@ -144,7 +145,7 @@ figures in this dashboard come from Kilid's published indicator and, once collec
 
 ## Tests
 
-44 tests in [`tests/`](tests/): Jalali calendar conversion, raw-file shapes, every official value carrying a URL, unit consistency across the Central Bank transcriptions, landmarks (Tajrish, Vanak, Azadi Tower, Chitgar lake, Shahr-e Rey) landing in the right district, the north–south gradient, Tehran as the most expensive province, the model beating its baseline, forecasts using only past data, both pages being free of external requests, and the Divar collector's parsing and aggregation.
+47 tests in [`tests/`](tests/): Jalali calendar conversion, raw-file shapes, every official value carrying a URL, unit consistency across the Central Bank transcriptions, landmarks (Tajrish, Vanak, Azadi Tower, Chitgar lake, Shahr-e Rey) landing in the right district, the north–south gradient, Tehran as the most expensive province, the model beating its baseline, forecasts using only past data, both pages being free of external requests, every period in the page data using the same fields, and the Divar collector's parsing and aggregation.
 
 ## Repository layout
 

@@ -28,32 +28,27 @@
 
 <main class="wrap">
   <div class="hero">
-   <div class="hero-grid">
-    <div class="hero-main">
     <div class="eyebrow">{{eyebrow}}</div>
     <h1>{{h1}}</h1>
     <p class="lede">{{lede}}</p>
     <div class="pills" id="pills"></div>
+    <div class="author" aria-label="{{author_label}}">
+      <img src="{{AUTHOR_IMG}}" alt="" width="36" height="36">
+      <span class="author-txt">{{author_label}}: <b>{{author_name}}</b> <span class="author-role">· {{author_role}}</span></span>
+      <span class="author-links"><a href="https://miladshabani.ir{{author_site_path}}" target="_blank" rel="noopener">{{author_site}}</a><a href="https://github.com/Milad-Shabani" target="_blank" rel="noopener">GitHub</a><a href="https://www.linkedin.com/in/milad-shabani97/" target="_blank" rel="noopener">LinkedIn</a></span>
     </div>
-    <aside class="author" aria-label="{{author_label}}">
-      <div class="author-label">{{author_label}}</div>
-      <div class="author-head">
-        <img src="{{AUTHOR_IMG}}" alt="{{author_name}}" width="76" height="76">
-        <div><div class="author-name">{{author_name}}</div><div class="author-role">{{author_role}}</div></div>
-      </div>
-      <p class="author-bio">{{author_bio}}</p>
-      <div class="author-edu">{{author_edu}}</div>
-      <nav class="author-links">
-        <a href="https://miladshabani.ir{{author_site_path}}" target="_blank" rel="noopener">{{author_site}}</a>
-        <a href="https://github.com/Milad-Shabani" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://www.linkedin.com/in/milad-shabani97/" target="_blank" rel="noopener">LinkedIn</a>
-        <a href="mailto:milad.shabani6515@gmail.com">{{author_email}}</a>
-      </nav>
-    </aside>
-   </div>
-    <div class="scopebar"><span>{{scope_label}}</span><span class="scope-chip" id="scopeChip"></span></div>
-    <div class="kpis" id="kpis" aria-live="polite"></div>
   </div>
+
+  <div class="yearbar" role="group" aria-label="{{year_label}}">
+    <div class="yb-row">
+      <span class="yb-title">{{year_label}}</span>
+      <div class="yb-years" id="ybYears"></div>
+      <button class="yb-play" id="ybPlay" type="button" title="{{play}}" aria-label="{{play}}" aria-pressed="false">▶</button>
+    </div>
+    <div class="yb-status" id="ybStatus" aria-live="polite"></div>
+  </div>
+  <div class="scopebar"><span>{{scope_label}}</span><span class="scope-chip" id="scopeChip"></span><span class="scope-when" id="scopeWhen"></span></div>
+  <div class="kpis" id="kpis" aria-live="polite"></div>
 
   <section class="block" id="tehran">
     <div class="sec-head"><div><h2><span class="num">1</span>{{s1_title}}</h2><p>{{s1_desc}}</p></div></div>
@@ -73,6 +68,7 @@
         <div class="mapbox" id="tMapBox">
           <svg id="tMap" role="img" aria-label="{{s1_title}}"></svg>
           <div class="compass">{{north}}</div>
+          <div class="map-na" id="tNA" hidden></div>
           <div class="zoom"><button data-z="in" title="{{zoom_in}}" aria-label="{{zoom_in}}">+</button><button data-z="out" title="{{zoom_out}}" aria-label="{{zoom_out}}">−</button><button data-z="reset" title="{{zoom_reset}}" aria-label="{{zoom_reset}}">⟲</button></div>
         </div>
         <div class="legend" id="tLegend"></div>
@@ -81,7 +77,7 @@
     </div>
     <div class="grid g-2" style="margin-top:14px">
       <div class="card"><h3>{{rank_title}}</h3><p class="note">{{rank_desc}}</p><div class="chart" id="tRank"></div></div>
-      <div class="card"><h3>{{catch_title}}</h3><p class="note">{{catch_desc}}</p><div class="chart" id="tCatch"></div></div>
+      <div class="card"><h3 id="catchTitle">{{catch_title}}</h3><p class="note" id="catchDesc">{{catch_desc}}</p><div class="chart" id="tCatch"></div></div>
     </div>
   </section>
 
@@ -121,6 +117,7 @@
       <div class="card">
         <div class="mapbox" id="iMapBox">
           <svg id="iMap" role="img" aria-label="{{s3_title}}"></svg>
+          <div class="map-na" id="iNA" hidden></div>
           <div class="zoom"><button data-z="in" title="{{zoom_in}}" aria-label="{{zoom_in}}">+</button><button data-z="out" title="{{zoom_out}}" aria-label="{{zoom_out}}">−</button><button data-z="reset" title="{{zoom_reset}}" aria-label="{{zoom_reset}}">⟲</button></div>
         </div>
         <div class="legend" id="iLegend"></div>
@@ -171,7 +168,7 @@
     </div>
   </section>
 </main>
-<footer><div class="wrap">{{footer}} · <a href="https://github.com/Milad-Shabani/Iran-housing-market-analytics">GitHub</a> · <a href="https://miladshabani.ir">miladshabani.ir</a> · <span id="built"></span></div></footer>
+<footer><div class="wrap">{{footer}} · <a href="https://github.com/Milad-Shabani/Iran-housing-market-analytics">{{footer_code}}</a> · <span id="built"></span></div></footer>
 <div class="tip" id="tip" role="tooltip"></div>
 <script>window.__LANG__="{{LANG}}";window.__T__={{I18N}};window.__DATA__={{DATA}};window.__TEXT__={{TEXT}};</script>
 <script>{{APP}}</script>
