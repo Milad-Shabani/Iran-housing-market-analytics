@@ -214,7 +214,8 @@ function renderKPIs() {
       kpi(T.k_ppm2, Mv(TEHRAN_MED), unitM, FA ? `میانه‌ی آگهی‌های ۱۴۰۳ · ${nf(D.meta.tehran_listings_located)} آگهی` : `1403 listings · ${nf(D.meta.tehran_listings_located)} ads`, { hero: true }),
       kpi(T.k_vsn, mult(TEHRAN_MED / NAT_MED, 1), '', FA ? `میانه‌ی کشور: ${Mv(NAT_MED)} ${unitM}` : `national median: ${Mv(NAT_MED)} ${unitM}`),
       kpi(T.k_price, Bv(TEH_CITY.pm), unitB, FA ? `متراژ معمول ${nf(TEH_CITY.sz)} متر` : `typical size ${nf(TEH_CITY.sz)} m²`),
-      kpi(T.k_growth, mult(TEHRAN_MED / D.meta.tehran_median_2021), '', FA ? `از ${Mv(D.meta.tehran_median_2021)} در حدود ۱۴۰۰` : `from ${Mv(D.meta.tehran_median_2021)} M c. 1400`),
+      LIVE ? kpi(liveLabel(), Mv(LIVE.tehran_median_ppm2), unitM, h('span', {}, [deltaSpan(LIVE.tehran_median_ppm2 / TEH_CITY.p - 1), FA ? ' نسبت به ۱۴۰۳' : ' vs 1403']))
+           : kpi(T.k_growth, mult(TEHRAN_MED / D.meta.tehran_median_2021), '', FA ? `از ${Mv(D.meta.tehran_median_2021)} در حدود ۱۴۰۰` : `from ${Mv(D.meta.tehran_median_2021)} M c. 1400`),
       ...common];
   } else if (sc.type === 'district') {
     const d = DBY[sc.d];
@@ -222,6 +223,7 @@ function renderKPIs() {
       kpi(T.k_ppm2, Mv(d.p), unitM, FA ? `رتبه‌ی ${nf(d.rank)} از ۲۲ · ${nf(d.n)} آگهی` : `rank ${d.rank} of 22 · ${nf(d.n)} ads`, { hero: true }),
       kpi(T.k_vs, spct(d.vs), '', FA ? `میانه‌ی تهران ${Mv(TEHRAN_MED)}` : `Tehran median ${Mv(TEHRAN_MED)} M`),
       kpi(T.k_price, Bv(d.pm), unitB, FA ? `متراژ معمول ${nf(d.sz)} متر · ساخت ${yr(d.by)}` : `typical ${nf(d.sz)} m² · built ${d.by}`),
+      (LIVE && d.p5) ? kpi(liveLabel(), Mv(d.p5), unitM, h('span', {}, [deltaSpan(d.g5 - 1), FA ? ` نسبت به ۱۴۰۳ · ${nf(d.n5)} آگهی` : ` vs 1403 · ${nf(d.n5)} ads`])) :
       kpi(T.k_growth, d.g ? mult(d.g) : T.no_data, '', d.g ? (FA ? `از ${Mv(d.p21)} در حدود ۱۴۰۰ (${nf(d.n21)} آگهی)` : `from ${Mv(d.p21)} M c. 1400 (${nf(d.n21)} ads)`) : (FA ? 'نمونه‌ی قدیمی کمتر از ۱۵ آگهی' : 'older sample under 15 ads')),
       ...common];
   } else if (sc.type === 'hood') {
@@ -269,6 +271,12 @@ const T_METRICS = {
   pk: { label: T.m_pk, ramp: 'teal', fmt: v => pct(v), legend: v => pct(v), hood: true },
   n: { label: T.m_n, ramp: 'teal', fmt: v => nf(v), legend: v => nf(v), hood: true },
 };
+if (D.meta.has_1405) {   // optional live layer from scripts/collect_divar.py
+  T_METRICS.p5 = { label: T.m_p5, ramp: 'blue', fmt: v => Mv(v) + ' ' + T.u_m_short, legend: v => Mv(v), hood: true };
+  T_METRICS.g5 = { label: T.m_g5, ramp: 'orange', fmt: v => mult(v), legend: v => mult(v, 2), hood: false };
+}
+const LIVE = D.meta.divar_1405 || null;
+const liveLabel = () => LIVE ? (FA ? `دیوار ۱۴۰۵ (${LIVE.collected_on})` : `Divar 1405 (${LIVE.collected_on})`) : '';
 const tSvg = $('#tMap');
 tSvg.setAttribute('viewBox', `0 0 ${D.tehran.w} ${D.tehran.h}`);
 const tG = svg('g', {}, tSvg);
@@ -301,12 +309,14 @@ function distTip(ev, d) {
   const m = T_METRICS[S.tMetric];
   const rows = [{ k: T.k_ppm2, v: Mv(d.p) + ' ' + T.u_m_short }, { k: T.k_vs, v: spct(d.vs) }, { k: T.k_growth, v: d.g ? mult(d.g) : '–' },
     { k: T.k_price, v: Bv(d.pm) + ' ' + unitB }, { k: T.u_list, v: nf(d.n) }];
-  if (!['p', 'g', 'pm', 'n'].includes(S.tMetric)) rows.unshift({ k: m.label, v: m.fmt(d[S.tMetric]) });
+  if (d.p5) rows.splice(1, 0, { k: liveLabel(), v: `${Mv(d.p5)} ${T.u_m_short} (${spct(d.g5 - 1)})` });
+  if (!['p', 'g', 'pm', 'n', 'p5', 'g5'].includes(S.tMetric)) rows.unshift({ k: m.label, v: m.fmt(d[S.tMetric]) });
   showTip(ev, `${distName(d.d)} · ${T.k_rank} ${nf(d.rank)}`, rows);
 }
 function hoodTip(ev, x) {
   const rows = [{ k: T.k_ppm2, v: Mv(x.p) + ' ' + T.u_m_short }, { k: T.tip_iqr, v: `${Mv(x.p25)}–${Mv(x.p75)}` },
     { k: T.k_price, v: Bv(x.pm) + ' ' + unitB }, { k: T.k_size, v: nf(x.sz) + ' ' + T.u_sqm }, { k: T.u_list, v: nf(x.n) }];
+  if (x.p5) rows.splice(1, 0, { k: liveLabel(), v: `${Mv(x.p5)} ${T.u_m_short} (${spct(x.p5 / x.p - 1)})` });
   if (S.budgetOn) rows.unshift({ k: `${nf(S.bSize)} ${T.u_sqm}`, v: Bv(hoodPriceFor(x, S.bSize)) + ' ' + unitB, c: AFF_COL[affordClass(x)] });
   const foot = x.q === 'outlier_vs_district' ? T.tip_flag : x.q === 'thin_sample' ? T.tip_thin : null;
   showTip(ev, `${hoodName(x)} · ${distName(x.d)}`, rows, foot);

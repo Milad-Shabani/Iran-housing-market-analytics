@@ -120,7 +120,19 @@ latest reading (1405/05, 210 M toman/m²) and grows it at the long-run rate of t
 percentile of actual ÷ forecast at each horizon. The user can change the growth rate; the bands
 keep their relative width.
 
-## 6. What this project does not do
+## 6. Optional 1405 layer (`scripts/collect_divar.py`)
+
+Divar's web map endpoint (`POST /v8/mapview/viewport`, documented at
+github.com/alighaffari3000/divar-scraper, tested 1405/06/24) returns at most 200 ads per map
+rectangle. The collector starts from a 6 × 6 grid over Tehran and splits any rectangle whose
+`count` exceeds what was returned. From each map card it keeps coordinates, the (rounded) price,
+and the chips for size, rooms, building age, parking and elevator. Aggregation applies the same
+rules as the 1403 data (20–1,000 m², robust 4-SD filter on log price per m²), assigns districts
+by point-in-polygon, attaches each ad to the nearest 1403 neighbourhood centroid in its district
+(within 1.5 km), and writes medians, quartiles and counts only. Rounded map prices move a median
+by well under 1%.
+
+## 7. What this project does not do
 
 - It does not splice asking and transaction prices into one series.
 - It does not estimate the 12 months between the last CBI release and the first Kilid reading.

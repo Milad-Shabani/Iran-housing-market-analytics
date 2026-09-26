@@ -58,6 +58,8 @@ def tehran_block(hoods: pd.DataFrame, districts: pd.DataFrame) -> dict:
             "rank": _r(row["rank"]), "top": row.top_slug, "low": row.cheapest_slug,
             "p21": _r(row.ppm2_2021), "n21": _r(row.listings_2021), "rel21": bool(row.reliable_2021 == True),  # noqa: E712
             "g": _r(row.growth_multiple, 3),
+            "p5": _r(getattr(row, "ppm2_1405", np.nan)), "n5": _r(getattr(row, "listings_1405", np.nan)),
+            "g5": _r(getattr(row, "growth_1405", np.nan), 3),
         })
     pts = []
     for r in hoods.itertuples():
@@ -70,7 +72,8 @@ def tehran_block(hoods: pd.DataFrame, districts: pd.DataFrame) -> dict:
             "p75": _r(r.ppm2_p75), "lo": _r(r.ci95_low), "hi": _r(r.ci95_high), "pm": _r(r.price_median),
             "sz": _r(r.size_median), "r": _r(r.rooms_median), "by": _r(r.build_year),
             "el": _r(r.elevator_share, 2), "pk": _r(r.parking_share, 2), "st": _r(r.storage_share, 2),
-            "rb": _r(r.rebuilt_share, 2), "q": r.quality})
+            "rb": _r(r.rebuilt_share, 2), "q": r.quality,
+            "p5": _r(getattr(r, "ppm2_1405", np.nan)), "n5": _r(getattr(r, "listings_1405", np.nan))})
     return {"w": TEHRAN_W, "h": proj.height(bounds), "districts": out_d, "hoods": pts,
             "median": _r(districts.attrs.get("tehran_median", np.nan)) if hasattr(districts, "attrs") else None}
 
@@ -159,7 +162,9 @@ def build_dashboard_data(*, hoods, districts, provinces, cities, satellites, ser
                  "tehran_listings_located": report["listings_2024_in_districts"],
                  "listings_2021": report["cleaning_2021"]["clean_rows"],
                  "growth_corr": _r(report["growth_vs_2021_level_corr"], 3),
-                 "month_min": ms["observed_listing_month_min"][:7], "month_max": ms["observed_listing_month_max"][:7]},
+                 "month_min": ms["observed_listing_month_min"][:7], "month_max": ms["observed_listing_month_max"][:7],
+                 "has_1405": bool(report.get("has_1405")),
+                 "divar_1405": report.get("divar_1405") or None},
         "tehran": tehran_block(hoods, districts),
         "iran": iran_block(provinces, cities),
         "satellites": [{"s": r.city_slug, "en": pretty(r.city_slug), "fa": _names_fa()[1].get(r.city_slug),

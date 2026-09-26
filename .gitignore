@@ -10,3 +10,4 @@ Thumbs.db
 .idea/
 # large OpenStreetMap downloads; only the simplified outputs are committed
 data/geo/_upstream/
+data/local/

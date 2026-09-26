@@ -142,3 +142,15 @@ def satellite_growth(listings: pd.DataFrame, cities: pd.DataFrame, min_n: int = 
     t = t[t.listings_2021 >= min_n].rename(columns={"listings": "listings_2024", "ppm2": "ppm2_2024"})
     t["growth_multiple"] = t.ppm2_2024 / t.ppm2_2021
     return t.sort_values("growth_multiple", ascending=False).reset_index(drop=True)
+
+
+def load_divar_1405() -> tuple[pd.DataFrame, pd.DataFrame, dict] | None:
+    """Optional 1405 layer written by `scripts/collect_divar.py aggregate` (None if absent)."""
+    import json
+    d = RAW / "divar_1405"
+    if not (d / "tehran_districts_1405.csv").exists():
+        return None
+    meta = json.loads((d / "meta.json").read_text(encoding="utf-8")) if (d / "meta.json").exists() else {}
+    hood_path = d / "tehran_neighbourhoods_1405.csv"
+    hoods = pd.read_csv(hood_path) if hood_path.exists() else pd.DataFrame(columns=["slug", "listings", "ppm2"])
+    return pd.read_csv(d / "tehran_districts_1405.csv"), hoods, meta

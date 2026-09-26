@@ -46,6 +46,16 @@ def main() -> None:
     dist = d24.merge(d21, on="district", how="left")
     dist["growth_multiple"] = np.where(dist.reliable_2021 == True, dist.ppm2 / dist.ppm2_2021, np.nan)  # noqa: E712
     rel = dist[dist.growth_multiple.notna()]
+    live = M.load_divar_1405()
+    report["has_1405"] = live is not None
+    if live is not None:
+        d5, h5, meta5 = live
+        dist = dist.merge(d5[["district", "listings", "ppm2"]].rename(columns={"listings": "listings_1405", "ppm2": "ppm2_1405"}),
+                          on="district", how="left")
+        dist["growth_1405"] = dist.ppm2_1405 / dist.ppm2
+        hoods = hoods.merge(h5[["slug", "listings", "ppm2"]].rename(columns={"listings": "listings_1405", "ppm2": "ppm2_1405"}),
+                            on="slug", how="left")
+        report["divar_1405"] = meta5
     report["growth_vs_2021_level_corr"] = float(np.corrcoef(np.log(rel.ppm2_2021), np.log(rel.growth_multiple))[0, 1])
     t21 = lst[lst.location_type == "tehran_district"]
     report["tehran_median_ppm2_2021"] = float(t21.ppm2.median())

@@ -4,7 +4,7 @@
 
 [![Live dashboard](https://img.shields.io/badge/live-dashboard-2a78d6?style=flat-square)](https://milad-shabani.github.io/Iran-housing-market-analytics/)
 [![Persian edition](https://img.shields.io/badge/نسخه-فارسی-0d366b?style=flat-square)](https://milad-shabani.github.io/Iran-housing-market-analytics/index.fa.html)
-[![Tests](https://img.shields.io/badge/tests-30%20passing-1baf7a?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-41%20passing-1baf7a?style=flat-square)](#tests)
 [![Dependencies](https://img.shields.io/badge/dashboard%20dependencies-none-52514e?style=flat-square)](#how-it-is-built)
 [![License](https://img.shields.io/badge/code-MIT-666?style=flat-square)](LICENSE)
 
@@ -96,14 +96,33 @@ data/raw  ──►  src/iran_housing  ──►  data/processed  ──►  das
 pip install -r requirements.txt
 python scripts/run_pipeline.py      # clean, locate, summarise, model, forecast -> data/processed/
 python scripts/build_dashboard.py   # -> site/index.html and site/index.fa.html
-pytest -q                           # 30 tests
+pytest -q                           # 41 tests
 ```
 
 `make all` does the same. To refresh or audit the raw layer from the upstream files: `python scripts/fetch_sources.py --check`, then `python scripts/prepare_geo.py`.
 
+## Adding Divar data for 1404–1405
+
+Divar's public 1M-ad release ends in 1403, and no newer Divar dataset is published. The live
+Divar app does have current listings, so the repository ships a collector for them.
+`divar.ir` has to be reachable from where you run it (it is from inside Iran):
+
+```bash
+python scripts/collect_divar.py collect      # Tehran apartment-for-sale ads, ~5-10 minutes at a polite pace
+python scripts/collect_divar.py aggregate    # -> data/raw/divar_1405/ (medians only)
+python scripts/run_pipeline.py && python scripts/build_dashboard.py
+```
+
+The collector tiles Tehran into map rectangles on Divar's web map endpoint, which returns up to
+200 ads per rectangle with size, rooms, building age, parking and elevator flags, coordinates
+and a rounded price. Rectangles with more ads are split until every ad is returned. Individual
+ads stay in `data/local/` (git-ignored). Only neighbourhood and district medians are written to
+`data/raw/divar_1405/`. Once they exist, the dashboard gains a *Price per m² (1405)* indicator, a
+*Change 1403 → 1405* indicator and a 1405 KPI tile. Without them the page is unchanged.
+
 ## Tests
 
-30 tests in [`tests/test_pipeline.py`](tests/test_pipeline.py): Jalali calendar conversion, raw-file shapes, every official value carrying a URL, unit consistency across the Central Bank transcriptions, landmarks (Tajrish, Vanak, Azadi Tower, Chitgar lake, Shahr-e Rey) landing in the right district, the north–south gradient, Tehran as the most expensive province, the model beating its baseline, forecasts using only past data, and both pages being free of external requests.
+41 tests in [`tests/`](tests/): Jalali calendar conversion, raw-file shapes, every official value carrying a URL, unit consistency across the Central Bank transcriptions, landmarks (Tajrish, Vanak, Azadi Tower, Chitgar lake, Shahr-e Rey) landing in the right district, the north–south gradient, Tehran as the most expensive province, the model beating its baseline, forecasts using only past data, both pages being free of external requests, and the Divar collector's parsing and aggregation.
 
 ## Repository layout
 
