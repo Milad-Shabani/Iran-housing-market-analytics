@@ -1,5 +1,7 @@
-name: Deploy dashboard to GitHub Pages
+name: Publish dashboard to gh-pages
 
+# GitHub Pages serves the gh-pages branch. Every change to site/ on main is copied there,
+# so the live dashboard always matches the committed build.
 on:
   push:
     branches: [main]
@@ -7,27 +9,34 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  publish:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Copy site/ to the gh-pages branch
+        run: |
+          set -e
+          cp -r site "$RUNNER_TEMP/site"
+          git config user.name "Milad Shabani"
+          git config user.email "milad.shabani6515@gmail.com"
+          git fetch origin gh-pages || true
+          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
+            git switch -c gh-pages origin/gh-pages
+          else
+            git switch --orphan gh-pages
+          fi
+          git rm -rq --ignore-unmatch . || true
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -r "$RUNNER_TEMP/site/." .
+          touch .nojekyll
+          git add -A
+          if git diff --cached --quiet; then echo "gh-pages already up to date"; exit 0; fi
+          git commit -m "Publish dashboard from ${GITHUB_SHA::7}"
+          git push origin gh-pages
