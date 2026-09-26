@@ -136,7 +136,7 @@ def _http(url: str, body: dict | None, attempts: int = 4) -> dict:
     for attempt in range(attempts):
         try:
             req = urllib.request.Request(url, data=data, headers=HEADERS, method="POST" if data else "GET")
-            with urllib.request.urlopen(req, timeout=30) as r:  # noqa: S310 - fixed Divar URLs
+            with urllib.request.urlopen(req, timeout=20) as r:  # noqa: S310 - fixed Divar URLs
                 return json.loads(r.read().decode("utf-8"))
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             if attempt == attempts - 1:
@@ -183,51 +183,90 @@ def _split(box):
     return [(box[0], box[1], mx, my), (mx, box[1], box[2], my), (box[0], my, mx, box[3]), (mx, my, box[2], box[3])]
 
 
-def collect(city: str, category: str, delay: float, max_requests: int, probe: bool) -> Path:
-    """Walk Divar's neighbourhood catalog; each ad keeps the neighbourhood Divar assigns it."""
+def crawl_neighbourhood(city_id: str, category: str, nb, delay: float, budget: list) -> tuple[list[dict], int]:
+    """All ads Divar tags with one neighbourhood; splits rectangles holding more than 200."""
+    pad_x, pad_y = (nb.max_lon - nb.min_lon) * 0.15, (nb.max_lat - nb.min_lat) * 0.15
+    queue = [(nb.min_lon - pad_x, nb.min_lat - pad_y, nb.max_lon + pad_x, nb.max_lat + pad_y)]
+    rows, made = [], 0
+    while queue and budget[0] > 0:
+        box = queue.pop()
+        budget[0] -= 1
+        payload = request_viewport(city_id, category, box, zoom_for(box), district_id=str(nb.divar_id))
+        made += 1
+        posts = payload.get("posts") or []
+        for post in posts:
+            row = parse_post(post)
+            if row:
+                row["slug"] = nb.slug
+                rows.append(row)
+        if int(payload.get("count") or 0) > len(posts) and len(posts) >= PAGE_LIMIT and (box[2] - box[0]) > 0.0005:
+            queue += _split(box)
+        time.sleep(delay)
+    return rows, made
+
+
+def collect(city: str, category: str, delay: float, max_requests: int, probe: bool,
+            max_minutes: float = 45.0, workers: int = 3) -> Path:
+    """Walk Divar's neighbourhood catalog; each ad keeps the neighbourhood Divar assigns it.
+
+    Neighbourhoods are fetched by a few parallel workers (Divar's map endpoint tolerates about
+    5 requests a second; 3 workers stay well below that). Rows are written as each neighbourhood
+    finishes and the walk stops cleanly after `max_minutes`, so a slow connection yields
+    partial data instead of nothing.
+    """
+    from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+
     import pandas as pd
     city_id, _ = CITIES[city]
     catalog = pd.read_csv(CATALOG)
-    found: dict[str, dict] = {}
-    requests_made = 0
     LOCAL.mkdir(parents=True, exist_ok=True)
-    for i, nb in enumerate(catalog.itertuples(), 1):
-        pad_x, pad_y = (nb.max_lon - nb.min_lon) * 0.15, (nb.max_lat - nb.min_lat) * 0.15
-        queue = [(nb.min_lon - pad_x, nb.min_lat - pad_y, nb.max_lon + pad_x, nb.max_lat + pad_y)]
-        while queue and requests_made < max_requests:
-            box = queue.pop()
-            payload = request_viewport(city_id, category, box, zoom_for(box), district_id=str(nb.divar_id))
-            requests_made += 1
-            if probe and requests_made == 1:
-                p = LOCAL / "divar_probe_response.json"
-                p.write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
-                print(f"probe: first raw response saved to {p}")
-            posts = payload.get("posts") or []
-            for post in posts:
-                row = parse_post(post)
-                if row:
-                    row["slug"] = nb.slug
-                    found.setdefault(row["token"], row)
-            if int(payload.get("count") or 0) > len(posts) and len(posts) >= PAGE_LIMIT and (box[2] - box[0]) > 0.0005:
-                queue += _split(box)
-            time.sleep(delay)
-        if i % 25 == 0:
-            print(f"{i}/{len(catalog)} neighbourhoods, {requests_made} requests, {len(found):,} ads")
-        if requests_made >= max_requests:
-            print("request cap reached; stopping early")
-            break
-    complete = requests_made < max_requests
+    if probe:
+        nb = catalog.iloc[0]
+        box = (nb.min_lon, nb.min_lat, nb.max_lon, nb.max_lat)
+        payload = request_viewport(city_id, category, box, zoom_for(box), district_id=str(nb.divar_id))
+        (LOCAL / "divar_probe_response.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1),
+                                                         encoding="utf-8")
+        print("probe: first raw response saved to data/local/divar_probe_response.json", flush=True)
     today = date.today().isoformat()
     path = LOCAL / f"divar_{city}_{category}_{today}.csv"
     cols = ["token", "slug", "lat", "lon", "approximate_location", "price_toman", "price_per_m2_toman", "size_m2",
             "rooms", "age_years", "parking", "elevator", "price_text"]
-    with path.open("w", newline="", encoding="utf-8") as fh:
-        w = csv.DictWriter(fh, fieldnames=cols + ["collected_on"])
-        w.writeheader()
-        for row in found.values():
-            w.writerow({**{c: row.get(c) for c in cols}, "collected_on": today})
-    print(f"{'complete' if complete else 'INCOMPLETE (request cap reached)'}: {len(found):,} ads "
-          f"in {requests_made} requests -> {path}")
+    seen: set[str] = set()
+    budget = [max_requests]
+    made = done = 0
+    started = time.monotonic()
+    stopped = None
+    pending = list(catalog.itertuples())
+    with path.open("w", newline="", encoding="utf-8") as fh, ThreadPoolExecutor(max_workers=workers) as pool:
+        writer = csv.DictWriter(fh, fieldnames=cols + ["collected_on"])
+        writer.writeheader()
+        running = set()
+        while pending or running:
+            over_time = (time.monotonic() - started) / 60 > max_minutes
+            if over_time and not stopped:
+                stopped = f"time budget of {max_minutes:.0f} min reached"
+            while pending and len(running) < workers and not stopped and budget[0] > 0:
+                running.add(pool.submit(crawl_neighbourhood, city_id, category, pending.pop(0), delay, budget))
+            if not running:
+                break
+            finished, running = wait(running, return_when=FIRST_COMPLETED)
+            for fut in finished:
+                rows, n = fut.result()
+                made += n
+                done += 1
+                for row in rows:
+                    if row["token"] not in seen:
+                        seen.add(row["token"])
+                        writer.writerow({**{c: row.get(c) for c in cols}, "collected_on": today})
+                fh.flush()
+                if done == 1 or done % 25 == 0:
+                    mins = (time.monotonic() - started) / 60
+                    print(f"{done}/{len(catalog)} neighbourhoods, {made} requests, {len(seen):,} ads, {mins:.1f} min",
+                          flush=True)
+        if budget[0] <= 0 and not stopped:
+            stopped = "request cap reached"
+    print(f"{'INCOMPLETE: ' + stopped if stopped else 'complete'}: {len(seen):,} ads from {done} neighbourhoods "
+          f"in {made} requests -> {path}", flush=True)
     return path
 
 
@@ -236,8 +275,6 @@ def aggregate(raw_path: Path, out_dir: Path | None = None) -> None:
     import numpy as np
     import pandas as pd
 
-    from iran_housing.geo import DistrictLocator
-    from iran_housing.market import load_neighborhoods_2024
 
     ads = pd.read_csv(raw_path)
     n0 = len(ads)
@@ -246,22 +283,37 @@ def aggregate(raw_path: Path, out_dir: Path | None = None) -> None:
     lp = np.log(ads.price_per_m2_toman)
     mad = np.median(np.abs(lp - lp.median())) * 1.4826
     ads = ads[((lp - lp.median()).abs() / mad) <= 4]
-    loc = DistrictLocator()
-    ads["district"] = [loc.locate(a, b)[0] for a, b in zip(ads.lat, ads.lon)]
-    ads = ads[ads.district.notna()]
+    # districts: vectorised point-in-polygon against the 22 municipal districts
+    import shapely
+    from shapely.geometry import shape
 
-    # nearest 1403 neighbourhood centroid in the same district (within 1.5 km)
-    hoods = load_neighborhoods_2024().dropna(subset=["lat", "lon", "district"])
+    from iran_housing.geo import tehran_districts
+    ads = ads.reset_index(drop=True)
+    district = np.full(len(ads), np.nan)
+    for f in tehran_districts():
+        inside = shapely.contains_xy(shape(f["geometry"]), ads.lon.to_numpy(), ads.lat.to_numpy())
+        district[inside & np.isnan(district)] = f["properties"]["district"]
+    ads["district"] = district
+    ads = ads[ads.district.notna()].reset_index(drop=True)
+
+    # neighbourhoods: keep Divar's tag when the ad sits inside that neighbourhood's box,
+    # otherwise use the nearest catalog centroid (vectorised, in chunks)
+    cat = pd.read_csv(CATALOG).set_index("slug")
     kx = math.cos(math.radians(35.7))
-    slugs = []
-    for d, lat, lon in zip(ads.district, ads.lat, ads.lon):
-        h = hoods[hoods.district == d]
-        dist = np.hypot((h.lon - lon) * kx, h.lat - lat) * 111
-        slugs.append(h.slug.iat[int(np.argmin(dist))] if len(h) and dist.min() <= 1.5 else None)
-    if "slug" in ads:  # Divar's own neighbourhood tag wins; nearest centroid only fills gaps
-        ads["slug"] = ads["slug"].where(ads["slug"].notna(), pd.Series(slugs, index=ads.index))
-    else:
-        ads["slug"] = slugs
+    tag = ads["slug"] if "slug" in ads else pd.Series([None] * len(ads))
+    box = cat.reindex(tag.fillna(""))
+    tol = 0.003
+    ok = (tag.notna().to_numpy()
+          & (ads.lon.to_numpy() >= box.min_lon.to_numpy() - tol) & (ads.lon.to_numpy() <= box.max_lon.to_numpy() + tol)
+          & (ads.lat.to_numpy() >= box.min_lat.to_numpy() - tol) & (ads.lat.to_numpy() <= box.max_lat.to_numpy() + tol))
+    cx, cy = cat.lon.to_numpy() * kx, cat.lat.to_numpy()
+    nearest = np.empty(len(ads), dtype=object)
+    px, py = ads.lon.to_numpy() * kx, ads.lat.to_numpy()
+    for i in range(0, len(ads), 20000):
+        d2 = (px[i:i + 20000, None] - cx[None, :]) ** 2 + (py[i:i + 20000, None] - cy[None, :]) ** 2
+        nearest[i:i + 20000] = cat.index.to_numpy()[d2.argmin(axis=1)]
+    ads["slug"] = np.where(ok, tag.to_numpy(), nearest)
+    tag_agreement = float(ok.mean()) if len(ads) else 0.0
 
     def summarise(g):
         return pd.Series({"listings": len(g), "ppm2": g.price_per_m2_toman.median(),
@@ -282,6 +334,7 @@ def aggregate(raw_path: Path, out_dir: Path | None = None) -> None:
     htab[htab.listings >= 10].to_csv(out / "tehran_neighbourhoods_1405.csv", index=False)
     meta = {"source": "Divar web map endpoint, apartment-sell, collected with scripts/collect_divar.py",
             "collected_on": collected, "raw_ads": n0, "ads_used": int(len(ads)),
+            "neighbourhood_tag_matches_location": round(tag_agreement, 4),
             "tehran_median_ppm2": float(ads.price_per_m2_toman.median()),
             "note": "Asking prices; map-card prices are rounded by Divar (about ±1%)."}
     (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -311,13 +364,15 @@ def main() -> int:
     c.add_argument("--delay", type=float, default=0.3)
     c.add_argument("--max-requests", type=int, default=5000)
     c.add_argument("--probe", action="store_true", help="save the first raw response for inspection")
+    c.add_argument("--max-minutes", type=float, default=45.0, help="stop cleanly and keep what was collected")
+    c.add_argument("--workers", type=int, default=3, help="parallel neighbourhoods (keep it small)")
     a = sub.add_parser("aggregate")
     a.add_argument("raw", nargs="?", help="raw CSV from `collect` (default: newest in data/local)")
     args = ap.parse_args()
     if args.cmd == "catalog":
         refresh_catalog()
     elif args.cmd == "collect":
-        collect(args.city, args.category, args.delay, args.max_requests, args.probe)
+        collect(args.city, args.category, args.delay, args.max_requests, args.probe, args.max_minutes, args.workers)
     else:
         raw = Path(args.raw) if args.raw else max(LOCAL.glob("divar_tehran_*.csv"), key=lambda p: p.stat().st_mtime)
         aggregate(raw)
