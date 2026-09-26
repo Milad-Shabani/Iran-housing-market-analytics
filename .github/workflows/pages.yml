@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths: ["site/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
+  workflow_call:   # the scheduled data refresh calls this after committing a new build
 
 permissions:
   contents: write
@@ -20,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main   # after a refresh commit, publish the newest build, not the triggering one
       - name: Copy site/ to the gh-pages branch
         run: |
           set -e

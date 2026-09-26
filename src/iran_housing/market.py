@@ -154,3 +154,11 @@ def load_divar_1405() -> tuple[pd.DataFrame, pd.DataFrame, dict] | None:
     hood_path = d / "tehran_neighbourhoods_1405.csv"
     hoods = pd.read_csv(hood_path) if hood_path.exists() else pd.DataFrame(columns=["slug", "listings", "ppm2"])
     return pd.read_csv(d / "tehran_districts_1405.csv"), hoods, meta
+
+
+def load_divar_snapshots() -> pd.DataFrame:
+    """History of collector runs (collected_on, scope, listings, ppm2, ...); empty if none."""
+    p = RAW / "divar_1405" / "snapshots.csv"
+    if not p.exists():
+        return pd.DataFrame(columns=["collected_on", "scope", "listings", "ppm2", "ppm2_p25", "ppm2_p75"])
+    return pd.read_csv(p, dtype={"scope": str})

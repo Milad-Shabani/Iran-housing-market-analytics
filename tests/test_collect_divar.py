@@ -70,3 +70,25 @@ def test_aggregate_places_ads_in_districts(tmp_path):
 def test_live_layer_is_optional():
     has = (ROOT / "data/raw/divar_1405/tehran_districts_1405.csv").exists()
     assert (M.load_divar_1405() is not None) == has
+
+
+def test_snapshots_accumulate_across_runs(tmp_path):
+    base = {"lat": 35.8045, "lon": 51.4255, "price_toman": 40e9, "size_m2": 100, "parking": 1, "elevator": 1}
+    out = tmp_path / "out"
+    for day, level in (("2026-09-19", 400e6), ("2026-09-26", 420e6)):
+        rows = [{**base, "token": f"{day}-{i}", "price_per_m2_toman": level + i * 1e6, "collected_on": day}
+                for i in range(20)]
+        raw = tmp_path / f"{day}.csv"
+        pd.DataFrame(rows).to_csv(raw, index=False)
+        C.aggregate(raw, out_dir=out)
+    snaps = pd.read_csv(out / "snapshots.csv", dtype={"scope": str})
+    tehran = snaps[snaps.scope == "tehran"].set_index("collected_on")
+    assert list(tehran.index) == ["2026-09-19", "2026-09-26"]
+    assert tehran.loc["2026-09-26", "ppm2"] > tehran.loc["2026-09-19", "ppm2"]
+
+
+def test_catalog_covers_every_1403_neighbourhood():
+    cat = pd.read_csv(ROOT / "data/geo/divar_tehran_neighbourhoods.csv")
+    hoods = pd.read_csv(ROOT / "data/raw/divar_1m/tehran_neighborhood_summary.csv")
+    assert cat.slug.is_unique and len(cat) >= 400
+    assert set(hoods.neighborhood_slug) <= set(cat.slug)

@@ -4,7 +4,7 @@
 
 [![Live dashboard](https://img.shields.io/badge/live-dashboard-2a78d6?style=flat-square)](https://milad-shabani.github.io/Iran-housing-market-analytics/)
 [![Persian edition](https://img.shields.io/badge/نسخه-فارسی-0d366b?style=flat-square)](https://milad-shabani.github.io/Iran-housing-market-analytics/index.fa.html)
-[![Tests](https://img.shields.io/badge/tests-41%20passing-1baf7a?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-43%20passing-1baf7a?style=flat-square)](#tests)
 [![Dependencies](https://img.shields.io/badge/dashboard%20dependencies-none-52514e?style=flat-square)](#how-it-is-built)
 [![License](https://img.shields.io/badge/code-MIT-666?style=flat-square)](LICENSE)
 
@@ -61,6 +61,7 @@ Nothing here is simulated. Each file in `data/raw/` traces to a public source, p
 | [Divar Tehran house prices](https://github.com/F-Yousefi/House_Price_Prediction) (Kaggle mirror) | Training the pricing model; the c. 1400 comparison | 3,479 individual ads (3,447 after cleaning) |
 | [Central Bank of Iran](https://www.cbi.ir/category/16994.aspx), Tehran housing market reports | Official monthly price series, forecast backtest | 91 of 101 months, 1395/01–1403/05, each row with its source URL |
 | [Kilid.com](https://kilid.com/house-prices/tehran) Tehran price indicator | Latest level and live forecast base | 12 months, 1404/06–1405/05 |
+| [Divar neighbourhood catalog](https://github.com/alighaffari3000/divar-scraper) (via alighaffari3000/divar-scraper) | Official Persian names and ids for 453 Tehran neighbourhoods; the 1405 collector's neighbourhood walk | 453 neighbourhoods, all 345 of the 1403 ones included |
 | [rferdosi/tehran-districts](https://github.com/rferdosi/tehran-districts), [OpenStreetMap via hosseinhabibi2004/iran-geojson](https://github.com/hosseinhabibi2004/iran-geojson) (ODbL) | District and province boundaries, county locations | 22 districts, 31 provinces, 475 counties |
 
 Full column-level detail: [`docs/data_dictionary.md`](docs/data_dictionary.md). Method and every judgement call: [`docs/methodology.md`](docs/methodology.md).
@@ -96,7 +97,7 @@ data/raw  ──►  src/iran_housing  ──►  data/processed  ──►  das
 pip install -r requirements.txt
 python scripts/run_pipeline.py      # clean, locate, summarise, model, forecast -> data/processed/
 python scripts/build_dashboard.py   # -> site/index.html and site/index.fa.html
-pytest -q                           # 41 tests
+pytest -q                           # 43 tests
 ```
 
 `make all` does the same. To refresh or audit the raw layer from the upstream files: `python scripts/fetch_sources.py --check`, then `python scripts/prepare_geo.py`.
@@ -113,16 +114,34 @@ python scripts/collect_divar.py aggregate    # -> data/raw/divar_1405/ (medians 
 python scripts/run_pipeline.py && python scripts/build_dashboard.py
 ```
 
-The collector tiles Tehran into map rectangles on Divar's web map endpoint, which returns up to
-200 ads per rectangle with size, rooms, building age, parking and elevator flags, coordinates
-and a rounded price. Rectangles with more ads are split until every ad is returned. Individual
+The collector walks Divar's own list of 453 Tehran neighbourhoods on Divar's web map endpoint,
+which returns up to 200 ads per map rectangle with size, rooms, building age, parking and
+elevator flags, coordinates and a rounded price; rectangles with more ads are split until every
+ad is returned, and each ad keeps the neighbourhood Divar assigns it. Individual
 ads stay in `data/local/` (git-ignored). Only neighbourhood and district medians are written to
 `data/raw/divar_1405/`. Once they exist, the dashboard gains a *Price per m² (1405)* indicator, a
 *Change 1403 → 1405* indicator and a 1405 KPI tile. Without them the page is unchanged.
 
+### Keeping it current automatically
+
+[`.github/workflows/refresh-data.yml`](.github/workflows/refresh-data.yml) runs the same three
+steps every Friday, appends the week's medians to `data/raw/divar_1405/snapshots.csv` (so the
+trend chart gains a Divar point each week), commits, and republishes the site. It is off until
+you add the repository variable `DATA_REFRESH = on` (Settings → Secrets and variables → Actions →
+Variables). If Divar refuses GitHub's servers, run the workflow on a self-hosted runner inside
+Iran and set `REFRESH_RUNNER = self-hosted`.
+
+### About the earlier draft's 1405 figures
+
+The first draft of this project (the uploaded `iran-housing-market-analytics` zip) has monthly
+province prices up to 2026-08. Its own code (`province_timeseries.py`) generates them from three
+anchor prices, an assumed price tier for each province and random noise, and its README labels
+them calibrated and illustrative. They are not observations, so they are not used here; the 1405
+figures in this dashboard come from Kilid's published indicator and, once collected, from Divar.
+
 ## Tests
 
-41 tests in [`tests/`](tests/): Jalali calendar conversion, raw-file shapes, every official value carrying a URL, unit consistency across the Central Bank transcriptions, landmarks (Tajrish, Vanak, Azadi Tower, Chitgar lake, Shahr-e Rey) landing in the right district, the north–south gradient, Tehran as the most expensive province, the model beating its baseline, forecasts using only past data, both pages being free of external requests, and the Divar collector's parsing and aggregation.
+43 tests in [`tests/`](tests/): Jalali calendar conversion, raw-file shapes, every official value carrying a URL, unit consistency across the Central Bank transcriptions, landmarks (Tajrish, Vanak, Azadi Tower, Chitgar lake, Shahr-e Rey) landing in the right district, the north–south gradient, Tehran as the most expensive province, the model beating its baseline, forecasts using only past data, both pages being free of external requests, and the Divar collector's parsing and aggregation.
 
 ## Repository layout
 
@@ -149,7 +168,12 @@ ads stay in `data/local/` (git-ignored). Only neighbourhood and district medians
 
 ## Author
 
-**Milad Shabani** — Business Intelligence & Data Analytics
-[miladshabani.ir](https://miladshabani.ir) · [GitHub](https://github.com/Milad-Shabani) · [LinkedIn](https://www.linkedin.com/in/milad-shabani97/)
+<img src="docs/assets/milad-shabani.jpg" alt="Milad Shabani" width="96" align="left" style="border-radius:50%;margin-right:14px">
+
+**Milad Shabani** — Business Intelligence Engineer · Data Analytics
+M.Sc. Industrial Engineering, Kharazmi University. 4+ years building data warehouses, dashboards
+and forecasting models in telecom, pharmaceutical distribution, manufacturing and marketplaces.
+[miladshabani.ir](https://miladshabani.ir) · [GitHub](https://github.com/Milad-Shabani) · [LinkedIn](https://www.linkedin.com/in/milad-shabani97/) · [Email](mailto:milad.shabani6515@gmail.com)
+<br clear="left">
 
 Code: MIT. Data: under each source's licence (Divar data and OpenStreetMap boundaries ODbL); see [DATA_LICENSE.md](DATA_LICENSE.md).

@@ -124,12 +124,14 @@ keep their relative width.
 
 Divar's web map endpoint (`POST /v8/mapview/viewport`, documented at
 github.com/alighaffari3000/divar-scraper, tested 1405/06/24) returns at most 200 ads per map
-rectangle. The collector starts from a 6 × 6 grid over Tehran and splits any rectangle whose
-`count` exceeds what was returned. From each map card it keeps coordinates, the (rounded) price,
+rectangle. The collector walks Divar's catalog of 453 Tehran neighbourhoods, requests each one with
+Divar's `districts` filter over its bounding box, and splits any rectangle whose `count` exceeds
+what was returned, so every ad carries the neighbourhood Divar assigns it. From each map card it keeps coordinates, the (rounded) price,
 and the chips for size, rooms, building age, parking and elevator. Aggregation applies the same
 rules as the 1403 data (20–1,000 m², robust 4-SD filter on log price per m²), assigns districts
-by point-in-polygon, attaches each ad to the nearest 1403 neighbourhood centroid in its district
-(within 1.5 km), and writes medians, quartiles and counts only. Rounded map prices move a median
+by point-in-polygon, keeps Divar's neighbourhood tag (falling back to the nearest 1403 centroid
+within 1.5 km only for untagged ads), writes medians, quartiles and counts, and appends one row
+per district to `snapshots.csv`, which becomes a weekly series when the refresh workflow is on. Rounded map prices move a median
 by well under 1%.
 
 ## 7. What this project does not do

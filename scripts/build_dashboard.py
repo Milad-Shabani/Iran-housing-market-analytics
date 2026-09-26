@@ -31,6 +31,7 @@ def main() -> None:
     css = (DASH / "styles.css").read_text(encoding="utf-8")
     app = (DASH / "app.js").read_text(encoding="utf-8")
     font = base64.b64encode((DASH / "fonts" / "vazirmatn-variable.woff2").read_bytes()).decode()
+    author_img = "data:image/jpeg;base64," + base64.b64encode((DASH / "author.jpg").read_bytes()).decode()
     font_face = ("@font-face{font-family:'Vazirmatn';src:url(data:font/woff2;base64," + font +
                  ") format('woff2');font-weight:100 900;font-style:normal;font-display:swap}")
 
@@ -44,7 +45,7 @@ def main() -> None:
         html = html.replace("{{CSS}}", css)
         html = html.replace("{{I18N}}", js_json(t)).replace("{{DATA}}", js_json(data))
         html = html.replace("{{TEXT}}", js_json(content))
-        html = html.replace("{{APP}}", app)
+        html = html.replace("{{APP}}", app).replace("{{AUTHOR_IMG}}", author_img)
 
         def sub(m: re.Match) -> str:
             key = m.group(1)

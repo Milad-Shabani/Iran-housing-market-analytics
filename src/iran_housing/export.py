@@ -33,7 +33,8 @@ def pretty(slug: str) -> str:
 
 
 def _names_fa() -> tuple[dict, dict]:
-    h = pd.read_csv(GEO / "tehran_neighbourhood_names_fa.csv")
+    """Persian display names: Divar's own neighbourhood catalog, and a city table."""
+    h = pd.read_csv(GEO / "divar_tehran_neighbourhoods.csv")
     c = pd.read_csv(GEO / "city_names_fa.csv")
     return dict(zip(h.slug, h.name_fa)), dict(zip(c.city_slug, c.name_fa))
 
@@ -139,6 +140,14 @@ def build_dashboard_data(*, hoods, districts, provinces, cities, satellites, ser
         mid = _d(int(ym[:4]), int(ym[5:7]), 15)
         return max(t for t, st in enumerate(starts) if st <= mid)
 
+    from .market import load_divar_snapshots
+    snaps = load_divar_snapshots()
+    live = []
+    for r in snaps[snaps.scope == "tehran"].itertuples():
+        d = pd.Timestamp(r.collected_on).date()
+        t = max(t for t, st in enumerate(starts) if st <= d)
+        live.append({"date": str(r.collected_on), "t": t, "p": _r(r.ppm2), "n": _r(r.listings)})
+
     mi = pd.read_csv(RAW / "divar_1m" / "major_cities_monthly_index.csv")
     major = [{"city": r.city_slug, "month": r.listing_month[:7], "t": greg_to_t(r.listing_month[:7]), "n": int(r.listings),
               "p": _r(r.median_price_per_sqm), "adj": _r(r.composition_adjusted_index_common_100, 1),
@@ -170,7 +179,7 @@ def build_dashboard_data(*, hoods, districts, provinces, cities, satellites, ser
         "satellites": [{"s": r.city_slug, "en": pretty(r.city_slug), "fa": _names_fa()[1].get(r.city_slug),
                         "n21": int(r.listings_2021), "p21": _r(r.ppm2_2021), "n24": _r(r.listings_2024),
                         "p24": _r(r.ppm2_2024), "g": _r(r.growth_multiple, 3)} for r in satellites.itertuples()],
-        "series": {"months": months, "last_cbi": last_cbi, "last_kilid": int(last_kil.t)},
+        "series": {"months": months, "last_cbi": last_cbi, "last_kilid": int(last_kil.t), "divar_live": live},
         "major": major,
         "forecast": {
             "best": lb.method.iat[0],

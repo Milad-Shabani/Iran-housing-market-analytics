@@ -820,10 +820,11 @@ function renderForecast() {
   const off = D.forecast.official[S.fMethod];
   const offPts = [[lc, lastCbi.cbi]].concat(off.map((v, i) => [lc + i + 1, v]));
   const divar = D.major.filter(r => r.city === 'tehran' && r.n >= 1000).map(r => [r.t, r.p]);
+  const divarLive = (D.series.divar_live || []).map(r => [r.t, r.p]);   // scheduled collector snapshots
   const cbiPts = MONTHS.map(m => [m.t, m.cbi]);
   const kilPts = MONTHS.map(m => [m.t, m.kil]);
   const xMax = lk + H;
-  const all = [...MONTHS.map(m => m.cbi), ...MONTHS.map(m => m.kil), ...b80.map(p => p[2]), ...off].filter(v => v);
+  const all = [...MONTHS.map(m => m.cbi), ...MONTHS.map(m => m.kil), ...b80.map(p => p[2]), ...off, ...divarLive.map(p => p[1])].filter(v => v);
   const yMin = S.fScale === 'log' ? 3e6 : 0, yMax = Math.max(...all) * 1.06;
   const todayT = (1405 - 1395) * 12 + 6;   // Mehr 1405
   [[T.cbi, '#2a78d6'], [T.kilid, '#eb6834'], [T.divar, '#1baf7a']].forEach(([l, c]) => key.appendChild(h('span', {}, [h('i', { style: `background:${c}` }), l])));
@@ -841,6 +842,7 @@ function renderForecast() {
       { id: 'cbi', color: '#2a78d6', pts: cbiPts },
       { id: 'off', color: '#2a78d6', pts: offPts, dash: '5 4', width: 1.6 },
       { id: 'divar', color: '#1baf7a', pts: divar, dots: true },
+      { id: 'divarLive', color: '#1baf7a', pts: divarLive, dots: true },
       { id: 'kil', color: '#eb6834', pts: kilPts },
       { id: 'fc', color: '#eb6834', pts: fan.map(i => [lk + i, mid(i)]), dash: '5 4', endLabel: Mv(mid(H)) },
     ],
@@ -850,7 +852,7 @@ function renderForecast() {
       if (m && m.cbi) rows.push({ k: T.cbi, v: Mv(m.cbi) + ' ' + T.u_m_short, c: '#2a78d6' });
       if (m && m.cbi && cbiYoY(t) != null) rows.push({ k: FA ? 'تغییر سالانه' : 'year on year', v: spct(cbiYoY(t)) });
       if (m && m.tx) rows.push({ k: FA ? 'تعداد معامله' : 'transactions', v: nf(m.tx) });
-      const dv = divar.find(p => p[0] === t); if (dv) rows.push({ k: T.divar, v: Mv(dv[1]) + ' ' + T.u_m_short, c: '#1baf7a' });
+      const dv = divar.find(p => p[0] === t) || divarLive.filter(p => p[0] === t).pop(); if (dv) rows.push({ k: T.divar, v: Mv(dv[1]) + ' ' + T.u_m_short, c: '#1baf7a' });
       if (m && m.kil) rows.push({ k: T.kilid, v: Mv(m.kil) + ' ' + T.u_m_short, c: '#eb6834' });
       if (t > lc && t <= lc + 24) rows.push({ k: T.official_path, v: Mv(off[t - lc - 1]) + ' ' + T.u_m_short, c: '#2a78d6' });
       if (t > lk) { const i = t - lk; rows.push({ k: T.forecast, v: Mv(mid(i)) + ' ' + T.u_m_short, c: '#eb6834' }); rows.push({ k: T.band80, v: `${Mv(b80[i][1])}–${Mv(b80[i][2])}` }); }

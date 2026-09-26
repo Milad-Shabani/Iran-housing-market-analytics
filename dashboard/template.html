@@ -28,10 +28,29 @@
 
 <main class="wrap">
   <div class="hero">
+   <div class="hero-grid">
+    <div class="hero-main">
     <div class="eyebrow">{{eyebrow}}</div>
     <h1>{{h1}}</h1>
     <p class="lede">{{lede}}</p>
     <div class="pills" id="pills"></div>
+    </div>
+    <aside class="author" aria-label="{{author_label}}">
+      <div class="author-label">{{author_label}}</div>
+      <div class="author-head">
+        <img src="{{AUTHOR_IMG}}" alt="{{author_name}}" width="76" height="76">
+        <div><div class="author-name">{{author_name}}</div><div class="author-role">{{author_role}}</div></div>
+      </div>
+      <p class="author-bio">{{author_bio}}</p>
+      <div class="author-edu">{{author_edu}}</div>
+      <nav class="author-links">
+        <a href="https://miladshabani.ir{{author_site_path}}" target="_blank" rel="noopener">{{author_site}}</a>
+        <a href="https://github.com/Milad-Shabani" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.linkedin.com/in/milad-shabani97/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="mailto:milad.shabani6515@gmail.com">{{author_email}}</a>
+      </nav>
+    </aside>
+   </div>
     <div class="scopebar"><span>{{scope_label}}</span><span class="scope-chip" id="scopeChip"></span></div>
     <div class="kpis" id="kpis" aria-live="polite"></div>
   </div>

@@ -170,7 +170,15 @@
   "actual": "Listed",
   "predicted": "Predicted",
   "m_p5": "Price per m² (1405, Divar live)",
-  "m_g5": "Change 1403 → 1405 (×)"
+  "m_g5": "Change 1403 → 1405 (×)",
+  "author_label": "Prepared by",
+  "author_name": "Milad Shabani",
+  "author_role": "Business Intelligence Engineer · Data Analytics",
+  "author_bio": "4+ years building data warehouses, dashboards and forecasting models in telecom, pharmaceutical distribution, manufacturing and marketplaces.",
+  "author_edu": "M.Sc. Industrial Engineering, Kharazmi University",
+  "author_site": "miladshabani.ir",
+  "author_site_path": "/en/",
+  "author_email": "Email"
  },
  "fa": {
   "title": "داشبورد تحلیل بازار مسکن ایران و تهران",
@@ -343,6 +351,14 @@
   "actual": "آگهی",
   "predicted": "پیش‌بینی",
   "m_p5": "قیمت هر متر (۱۴۰۵، دیوار)",
-  "m_g5": "تغییر ۱۴۰۳ تا ۱۴۰۵ (برابر)"
+  "m_g5": "تغییر ۱۴۰۳ تا ۱۴۰۵ (برابر)",
+  "author_label": "تهیه‌کننده",
+  "author_name": "میلاد شعبانی",
+  "author_role": "مهندس هوش تجاری و تحلیل داده",
+  "author_bio": "بیش از ۴ سال ساخت انبار داده، داشبورد و مدل پیش‌بینی در مخابرات، پخش دارو، تولید و بازارگاه‌های آنلاین.",
+  "author_edu": "کارشناسی ارشد مهندسی صنایع، دانشگاه خوارزمی",
+  "author_site": "وب‌سایت",
+  "author_site_path": "/",
+  "author_email": "ایمیل"
  }
 }

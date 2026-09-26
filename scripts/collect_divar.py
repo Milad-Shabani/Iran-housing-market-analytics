@@ -12,9 +12,16 @@ pipeline picks up automatically and the dashboard shows as a 1405 layer next to 
 
 How it works: Divar's web map endpoint (POST /v8/mapview/viewport) returns up to 200 ads per
 map rectangle with size, rooms, building age, parking/elevator icons, coordinates and a rounded
-price. The city is tiled into rectangles and any rectangle holding more than 200 ads is split in
-four until every ad is returned. Endpoint and response shape are documented publicly at
+price. The collector walks Divar's own neighbourhood catalog (data/geo/divar_tehran_neighbourhoods.csv,
+453 neighbourhoods; refresh it with `python scripts/collect_divar.py catalog`), asks for each
+neighbourhood's ads with Divar's `districts` filter, and splits any rectangle that holds more than
+200 ads until every ad is returned. Each ad is therefore tagged with the neighbourhood Divar itself
+gives it. Endpoint and response shape are documented publicly at
 github.com/alighaffari3000/divar-scraper (docs/DIVAR_API.md, tested 1405/06/24).
+
+Every `aggregate` run also appends one row per district (and one for all of Tehran) to
+data/raw/divar_1405/snapshots.csv, so repeated runs build a time series; the scheduled workflow
+.github/workflows/refresh-data.yml does this automatically.
 
 Please keep the pace polite (the default waits 0.3 s between requests) and respect Divar's terms.
 """
@@ -36,6 +43,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 MAP_URL = "https://api.divar.ir/v8/mapview/viewport"
+CATALOG_URL = "https://api.divar.ir/v8/places/cities/{city_id}/districts"
 PAGE_LIMIT = 200
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -49,6 +57,7 @@ CITIES = {  # Divar city id and a bounding box (min_lon, min_lat, max_lon, max_l
 }
 LOCAL = ROOT / "data" / "local"
 OUT = ROOT / "data" / "raw" / "divar_1405"
+CATALOG = ROOT / "data" / "geo" / "divar_tehran_neighbourhoods.csv"
 
 _FA = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
 _UNITS = {"میلیارد": 1e9, "میلیون": 1e6, "هزار": 1e3}
@@ -122,25 +131,46 @@ def parse_post(post: dict) -> dict | None:
 
 
 # --------------------------------------------------------------------------- network
-def request_viewport(city_id: str, category: str, bbox, zoom: int, attempts: int = 4) -> dict:
-    min_lon, min_lat, max_lon, max_lat = bbox
-    body = {
-        "city_ids": [city_id],
-        "search_data": {"form_data": {"data": {"category": {"str": {"value": category}}}}},
-        "camera_info": {"bbox": {"minLongitude": min_lon, "minLatitude": min_lat,
-                                 "maxLongitude": max_lon, "maxLatitude": max_lat}, "zoom": zoom},
-    }
-    data = json.dumps(body).encode("utf-8")
+def _http(url: str, body: dict | None, attempts: int = 4) -> dict:
+    data = json.dumps(body).encode("utf-8") if body is not None else None
     for attempt in range(attempts):
         try:
-            req = urllib.request.Request(MAP_URL, data=data, headers=HEADERS, method="POST")
-            with urllib.request.urlopen(req, timeout=30) as r:  # noqa: S310 - fixed Divar URL
+            req = urllib.request.Request(url, data=data, headers=HEADERS, method="POST" if data else "GET")
+            with urllib.request.urlopen(req, timeout=30) as r:  # noqa: S310 - fixed Divar URLs
                 return json.loads(r.read().decode("utf-8"))
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             if attempt == attempts - 1:
-                raise RuntimeError(f"Divar request failed for {bbox}: {exc}") from exc
+                raise RuntimeError(f"Divar request failed ({url}): {exc}") from exc
             time.sleep(2 ** attempt * 2)
     return {}
+
+
+def refresh_catalog(city_id: str = "1") -> None:
+    """Re-download Divar's neighbourhood catalog (ids, Persian names, slugs, centroids, bboxes)."""
+    import pandas as pd
+    payload = _http(CATALOG_URL.format(city_id=city_id), None)
+    items = payload.get("districts", payload if isinstance(payload, list) else [])
+    rows = [{"divar_id": x["id"], "slug": x["slug"], "name_fa": x["name"],
+             "lat": round(x["centroid"]["latitude"], 5), "lon": round(x["centroid"]["longitude"], 5),
+             "min_lon": x["bbox"][0], "min_lat": x["bbox"][1], "max_lon": x["bbox"][2], "max_lat": x["bbox"][3]}
+            for x in items if x.get("bbox")]
+    pd.DataFrame(rows).to_csv(CATALOG, index=False)
+    print(f"catalog: {len(rows)} neighbourhoods -> {CATALOG}")
+
+
+def request_viewport(city_id: str, category: str, bbox, zoom: int, attempts: int = 4,
+                     district_id: str | None = None) -> dict:
+    min_lon, min_lat, max_lon, max_lat = bbox
+    form = {"category": {"str": {"value": category}}}
+    if district_id:
+        form["districts"] = {"repeated_string": {"value": [str(district_id)]}}
+    body = {
+        "city_ids": [city_id],
+        "search_data": {"form_data": {"data": form}},
+        "camera_info": {"bbox": {"minLongitude": min_lon, "minLatitude": min_lat,
+                                 "maxLongitude": max_lon, "maxLatitude": max_lat}, "zoom": zoom},
+    }
+    return _http(MAP_URL, body, attempts)
 
 
 def zoom_for(bbox) -> int:
@@ -148,40 +178,48 @@ def zoom_for(bbox) -> int:
     return int(min(17, max(14, round(math.log2(360 / width)))))
 
 
+def _split(box):
+    mx, my = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
+    return [(box[0], box[1], mx, my), (mx, box[1], box[2], my), (box[0], my, mx, box[3]), (mx, my, box[2], box[3])]
+
+
 def collect(city: str, category: str, delay: float, max_requests: int, probe: bool) -> Path:
-    city_id, bbox = CITIES[city]
-    # start from a 6 x 6 grid so the first rectangles are already at map zoom >= 14
-    step_x, step_y = (bbox[2] - bbox[0]) / 6, (bbox[3] - bbox[1]) / 6
-    queue = [(bbox[0] + i * step_x, bbox[1] + j * step_y, bbox[0] + (i + 1) * step_x, bbox[1] + (j + 1) * step_y)
-             for i in range(6) for j in range(6)]
+    """Walk Divar's neighbourhood catalog; each ad keeps the neighbourhood Divar assigns it."""
+    import pandas as pd
+    city_id, _ = CITIES[city]
+    catalog = pd.read_csv(CATALOG)
     found: dict[str, dict] = {}
     requests_made = 0
     LOCAL.mkdir(parents=True, exist_ok=True)
-    while queue and requests_made < max_requests:
-        box = queue.pop()
-        payload = request_viewport(city_id, category, box, zoom_for(box))
-        requests_made += 1
-        if probe and requests_made == 1:
-            p = LOCAL / "divar_probe_response.json"
-            p.write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
-            print(f"probe: first raw response saved to {p}")
-        posts = payload.get("posts") or []
-        count = int(payload.get("count") or 0)
-        for post in posts:
-            row = parse_post(post)
-            if row:
-                found.setdefault(row["token"], row)
-        if count > len(posts) and len(posts) >= PAGE_LIMIT and (box[2] - box[0]) > 0.0005:
-            mx, my = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
-            queue += [(box[0], box[1], mx, my), (mx, box[1], box[2], my),
-                      (box[0], my, mx, box[3]), (mx, my, box[2], box[3])]
-        if requests_made % 25 == 0:
-            print(f"{requests_made} requests, {len(found):,} ads, {len(queue)} rectangles left")
-        time.sleep(delay)
-    complete = not queue
+    for i, nb in enumerate(catalog.itertuples(), 1):
+        pad_x, pad_y = (nb.max_lon - nb.min_lon) * 0.15, (nb.max_lat - nb.min_lat) * 0.15
+        queue = [(nb.min_lon - pad_x, nb.min_lat - pad_y, nb.max_lon + pad_x, nb.max_lat + pad_y)]
+        while queue and requests_made < max_requests:
+            box = queue.pop()
+            payload = request_viewport(city_id, category, box, zoom_for(box), district_id=str(nb.divar_id))
+            requests_made += 1
+            if probe and requests_made == 1:
+                p = LOCAL / "divar_probe_response.json"
+                p.write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
+                print(f"probe: first raw response saved to {p}")
+            posts = payload.get("posts") or []
+            for post in posts:
+                row = parse_post(post)
+                if row:
+                    row["slug"] = nb.slug
+                    found.setdefault(row["token"], row)
+            if int(payload.get("count") or 0) > len(posts) and len(posts) >= PAGE_LIMIT and (box[2] - box[0]) > 0.0005:
+                queue += _split(box)
+            time.sleep(delay)
+        if i % 25 == 0:
+            print(f"{i}/{len(catalog)} neighbourhoods, {requests_made} requests, {len(found):,} ads")
+        if requests_made >= max_requests:
+            print("request cap reached; stopping early")
+            break
+    complete = requests_made < max_requests
     today = date.today().isoformat()
     path = LOCAL / f"divar_{city}_{category}_{today}.csv"
-    cols = ["token", "lat", "lon", "approximate_location", "price_toman", "price_per_m2_toman", "size_m2",
+    cols = ["token", "slug", "lat", "lon", "approximate_location", "price_toman", "price_per_m2_toman", "size_m2",
             "rooms", "age_years", "parking", "elevator", "price_text"]
     with path.open("w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=cols + ["collected_on"])
@@ -220,7 +258,10 @@ def aggregate(raw_path: Path, out_dir: Path | None = None) -> None:
         h = hoods[hoods.district == d]
         dist = np.hypot((h.lon - lon) * kx, h.lat - lat) * 111
         slugs.append(h.slug.iat[int(np.argmin(dist))] if len(h) and dist.min() <= 1.5 else None)
-    ads["slug"] = slugs
+    if "slug" in ads:  # Divar's own neighbourhood tag wins; nearest centroid only fills gaps
+        ads["slug"] = ads["slug"].where(ads["slug"].notna(), pd.Series(slugs, index=ads.index))
+    else:
+        ads["slug"] = slugs
 
     def summarise(g):
         return pd.Series({"listings": len(g), "ppm2": g.price_per_m2_toman.median(),
@@ -244,12 +285,26 @@ def aggregate(raw_path: Path, out_dir: Path | None = None) -> None:
             "tehran_median_ppm2": float(ads.price_per_m2_toman.median()),
             "note": "Asking prices; map-card prices are rounded by Divar (about ±1%)."}
     (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    # append this collection to the running history (one row per district + Tehran)
+    snap = dtab[["district", "listings", "ppm2", "ppm2_p25", "ppm2_p75"]].rename(columns={"district": "scope"})
+    snap["scope"] = snap["scope"].astype(str)
+    city = pd.DataFrame([{"scope": "tehran", "listings": len(ads), "ppm2": ads.price_per_m2_toman.median(),
+                          "ppm2_p25": ads.price_per_m2_toman.quantile(.25),
+                          "ppm2_p75": ads.price_per_m2_toman.quantile(.75)}])
+    snap = pd.concat([city, snap], ignore_index=True)
+    snap.insert(0, "collected_on", collected)
+    hist = out / "snapshots.csv"
+    if hist.exists():
+        old = pd.read_csv(hist, dtype={"scope": str})
+        snap = pd.concat([old[old.collected_on != collected], snap], ignore_index=True)
+    snap.sort_values(["collected_on", "scope"]).to_csv(hist, index=False)
     print(json.dumps(meta, ensure_ascii=False, indent=2))
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("catalog", help="refresh Divar's Tehran neighbourhood catalog")
     c = sub.add_parser("collect")
     c.add_argument("--city", default="tehran", choices=sorted(CITIES))
     c.add_argument("--category", default="apartment-sell")
@@ -259,7 +314,9 @@ def main() -> int:
     a = sub.add_parser("aggregate")
     a.add_argument("raw", nargs="?", help="raw CSV from `collect` (default: newest in data/local)")
     args = ap.parse_args()
-    if args.cmd == "collect":
+    if args.cmd == "catalog":
+        refresh_catalog()
+    elif args.cmd == "collect":
         collect(args.city, args.category, args.delay, args.max_requests, args.probe)
     else:
         raw = Path(args.raw) if args.raw else max(LOCAL.glob("divar_tehran_*.csv"), key=lambda p: p.stat().st_mtime)

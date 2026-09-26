@@ -1,0 +1,66 @@
+name: Refresh Divar data
+
+# Keeps the dashboard current: collects today's Tehran apartment-for-sale ads from Divar,
+# aggregates them to neighbourhood and district medians, appends a snapshot to the history,
+# rebuilds the dashboard and publishes it.
+#
+# Off by default. To switch it on:
+#   Settings -> Secrets and variables -> Actions -> Variables -> New variable
+#     DATA_REFRESH = on
+# Divar may refuse requests from GitHub's data centres. If the first manual run
+# (Actions -> Refresh Divar data -> Run workflow) fails at "Collect", register a
+# self-hosted runner on a machine inside Iran and add a second variable:
+#     REFRESH_RUNNER = self-hosted
+
+on:
+  schedule:
+    - cron: "17 3 * * 5"   # Fridays 03:17 UTC (06:47 Tehran)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.event_name == 'workflow_dispatch' || vars.DATA_REFRESH == 'on'
+    runs-on: ${{ vars.REFRESH_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Collect today's Divar ads
+        run: python scripts/collect_divar.py collect
+      - name: Aggregate to medians and append the snapshot
+        run: python scripts/collect_divar.py aggregate
+      - name: Rebuild analysis and dashboard
+        run: |
+          python scripts/run_pipeline.py
+          python scripts/build_dashboard.py
+      - run: pytest -q
+      - id: commit
+        name: Commit the refreshed data
+        run: |
+          git config user.name "Milad Shabani"
+          git config user.email "milad.shabani6515@gmail.com"
+          git add data/raw/divar_1405 data/processed site
+          if git diff --cached --quiet; then echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          git commit -m "Refresh Divar data ($(date -u +%Y-%m-%d))"
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: refresh
+    if: needs.refresh.outputs.changed == 'true'
+    uses: ./.github/workflows/pages.yml
+    permissions:
+      contents: write

@@ -7,6 +7,11 @@
     "516,947 residential-sale ads in 420 cities, 1400–1403; used through the published city and Tehran-neighbourhood aggregates of maminigder/Iran-Real-Estate-Market-Analysis (MIT)."
    ],
    [
+    "Divar's 1M-ad release, announcement (AIM Group)",
+    "https://aimgroup.com/2025/04/17/divar-ir-publishes-1m-datasets-of-real-estate-ads-on-huggingface/",
+    "April 2025: Divar published one million anonymised real-estate ads for research, with user consent and personal data removed."
+   ],
+   [
     "Divar Tehran house prices (3,479 ads)",
     "https://github.com/F-Yousefi/House_Price_Prediction",
     "Individual Tehran listings with area, rooms, parking, storage, elevator and price; mirror of the Kaggle dataset. Trains the pricing model."
@@ -30,6 +35,11 @@
     "Iran provinces and counties (OpenStreetMap, ODbL)",
     "https://github.com/hosseinhabibi2004/iran-geojson",
     "Province outlines for the national map; county names and locations for matching Divar cities to provinces."
+   ],
+   [
+    "Divar neighbourhood catalog and web API notes (alighaffari3000/divar-scraper)",
+    "https://github.com/alighaffari3000/divar-scraper",
+    "Divar's own list of 453 Tehran neighbourhoods (official Persian names, ids, centroids) and the tested map endpoint used by the 1405 collector."
    ]
   ],
   "limits": [
@@ -57,6 +67,11 @@
     "۵۱۶٬۹۴۷ آگهی فروش مسکونی در ۴۲۰ شهر، ۱۴۰۰ تا ۱۴۰۳؛ از طریق جدول‌های تجمیعی شهر و محله‌ی تهران که در مخزن maminigder/Iran-Real-Estate-Market-Analysis (MIT) منتشر شده‌اند."
    ],
    [
+    "اعلام انتشار داده‌ی یک‌میلیونی دیوار (AIM Group)",
+    "https://aimgroup.com/2025/04/17/divar-ir-publishes-1m-datasets-of-real-estate-ads-on-huggingface/",
+    "فروردین ۱۴۰۴: دیوار یک میلیون آگهی املاک را پس از حذف اطلاعات شخصی و با رضایت کاربران برای پژوهش منتشر کرد."
+   ],
+   [
     "قیمت خانه در تهران از دیوار (۳٬۴۷۹ آگهی)",
     "https://github.com/F-Yousefi/House_Price_Prediction",
     "آگهی‌های تک‌به‌تک تهران با متراژ، اتاق، پارکینگ، انباری، آسانسور و قیمت؛ نسخه‌ی آینه‌ی داده‌ی کگل. مدل قیمت‌گذاری روی آن آموزش دیده است."
@@ -80,6 +95,11 @@
     "استان‌ها و شهرستان‌های ایران (OpenStreetMap، ODbL)",
     "https://github.com/hosseinhabibi2004/iran-geojson",
     "مرز استان‌ها برای نقشه‌ی کشور؛ نام و موقعیت شهرستان‌ها برای تطبیق شهرهای دیوار با استان."
+   ],
+   [
+    "فهرست محله‌های دیوار و مستند API وب (alighaffari3000/divar-scraper)",
+    "https://github.com/alighaffari3000/divar-scraper",
+    "فهرست رسمی ۴۵۳ محله‌ی تهران در دیوار (نام فارسی، شناسه، مرکز) و نقطه‌ی پایانی نقشه که ابزار جمع‌آوری ۱۴۰۵ از آن استفاده می‌کند."
    ]
   ],
   "limits": [
