@@ -1,0 +1,9 @@
+{
+  "source": "Divar web map endpoint, apartment-sell, collected with scripts/collect_divar.py",
+  "collected_on": "2026-09-26",
+  "raw_ads": 172093,
+  "ads_used": 170269,
+  "neighbourhood_tag_matches_location": 0.9992,
+  "tehran_median_ppm2": 246000000.0,
+  "note": "Asking prices; map-card prices are rounded by Divar (about ±1%)."
+}
