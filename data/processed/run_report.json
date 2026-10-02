@@ -1,5 +1,5 @@
 {
-  "built": "2026-09-26",
+  "built": "2026-10-02",
   "tehran_median_ppm2_2024": 94122243.3652317,
   "neighbourhood_quality": {
     "ok": 297,
@@ -26,12 +26,12 @@
   "has_1405": true,
   "divar_1405": {
     "source": "Divar web map endpoint, apartment-sell, collected with scripts/collect_divar.py",
-    "collected_on": "2026-09-26",
-    "raw_ads": 172245,
-    "ads_used": 170427,
-    "neighbourhood_tag_matches_location": 0.9992,
-    "tehran_median_ppm2": 262000000.0,
-    "tehran_median_ppm2_all_ads": 247000000.0,
+    "collected_on": "2026-10-02",
+    "raw_ads": 17270,
+    "ads_used": 17175,
+    "neighbourhood_tag_matches_location": 1.0,
+    "tehran_median_ppm2": 222305180.1801802,
+    "tehran_median_ppm2_all_ads": 239000000.0,
     "method": "listing-weighted median of neighbourhood medians, as for 1403",
     "note": "Asking prices; map-card prices are rounded by Divar (about ±1%)."
   },
@@ -41,7 +41,7 @@
   "valuation_cv": {
     "hedonic_ols": {
       "r2_log": 0.8822415768344622,
-      "mape": 0.2928737484481334,
+      "mape": 0.2928737484481335,
       "median_ape": 0.15688508578668203,
       "within_20pct": 0.6115462721206847
     },
@@ -83,11 +83,11 @@
     {
       "method": "holt_damped",
       "mape_h1": 0.0329,
-      "mape_h3": 0.0879,
+      "mape_h3": 0.088,
       "mape_h6": 0.2015,
-      "mape_h12": 0.338,
-      "mape_avg_1_12": 0.1953,
-      "mape_h24": 0.589,
+      "mape_h12": 0.3383,
+      "mape_avg_1_12": 0.1954,
+      "mape_h24": 0.5892,
       "origins_h12": 35
     },
     {
@@ -95,9 +95,9 @@
       "mape_h1": 0.0335,
       "mape_h3": 0.0919,
       "mape_h6": 0.2119,
-      "mape_h12": 0.3897,
+      "mape_h12": 0.3898,
       "mape_avg_1_12": 0.2064,
-      "mape_h24": 0.8738,
+      "mape_h24": 0.8739,
       "origins_h12": 35
     },
     {
