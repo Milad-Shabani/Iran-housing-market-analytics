@@ -1,11 +1,11 @@
 {
   "source": "Divar web map endpoint, apartment-sell, collected with scripts/collect_divar.py",
-  "collected_on": "2026-10-30",
-  "raw_ads": 178397,
-  "ads_used": 176591,
-  "neighbourhood_tag_matches_location": 0.9991,
-  "tehran_median_ppm2": 296482428.115016,
-  "tehran_median_ppm2_all_ads": 280000000.0,
+  "collected_on": "2026-11-06",
+  "raw_ads": 177998,
+  "ads_used": 176182,
+  "neighbourhood_tag_matches_location": 0.9992,
+  "tehran_median_ppm2": 307275294.11764705,
+  "tehran_median_ppm2_all_ads": 293000000.0,
   "method": "listing-weighted median of neighbourhood medians, as for 1403",
   "note": "Asking prices; map-card prices are rounded by Divar (about ±1%)."
 }
