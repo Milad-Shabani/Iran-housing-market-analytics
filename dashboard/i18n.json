@@ -211,7 +211,9 @@
   "ch_rental_desc": "Rental ads must quote both monthly rent and an upfront deposit. Each series measures one amount across the same apartments.",
   "ch_rental_units": "Amounts are in millions of source currency units per apartment. Divar’s archive does not specify the currency denomination.",
   "cw_change": "Weekly change",
-  "cw_hoods": "Neighbourhoods"
+  "cw_hoods": "Neighbourhoods",
+  "cw_spread": "The dot marks the median. The line spans the middle 50% of asking prices.",
+  "cw_week": "Week starting"
  },
  "fa": {
   "cw_title": "قیمت هفتگی فروش آپارتمان",
@@ -425,6 +427,8 @@
   "ch_rental_desc": "آگهی‌های اجاره‌ای وارد این مقایسه شده‌اند که هم اجارهٔ ماهانه و هم ودیعهٔ مشخص دارند. هر دو شاخص از همان مجموعهٔ آپارتمان‌ها محاسبه شده‌اند.",
   "ch_rental_units": "مبلغ‌ها به میلیون واحد پولی منبع برای کل آپارتمان‌اند. دیوار واحد پول این آرشیو را مشخص نکرده است.",
   "cw_change": "تغییر هفتگی",
-  "cw_hoods": "تعداد محله‌ها"
+  "cw_hoods": "تعداد محله‌ها",
+  "cw_spread": "نقطه، میانهٔ قیمت و خط، بازهٔ ۵۰٪ میانی آگهی‌ها را نشان می‌دهد.",
+  "cw_week": "هفتهٔ آغازشده در"
  }
 }

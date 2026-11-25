@@ -1074,6 +1074,27 @@ function renderCityWeekly() {
   wrap.appendChild(table);
   const all = rows.flatMap(c => c.rows);
   if (!all.length) { chart.appendChild(h('p', {cls:'note', text:T.cw_empty})); return; }
+  if (new Set(all.map(r => r[0])).size === 1) {
+    // A single week supports a cross-city comparison. Show the spread until a trend exists.
+    const ranked = rows.map((city, i) => ({city, point:city.rows.at(-1), color:colors[i]}))
+      .filter(item => item.point).sort((a,b) => b.point[3] - a.point[3]);
+    key.textContent = T.cw_spread;
+    const f = frame(chart, 760, 30 * ranked.length + 45, {l:78, r:24, t:12, b:28});
+    const max = Math.max(...ranked.map(item => item.point[5])) * 1.05;
+    const X = price => f.m.l + price / max * f.iw;
+    for (const tick of niceTicks(0, max)) {
+      svg('line', {x1:X(tick), x2:X(tick), y1:f.m.t, y2:f.h - f.m.b, class:'gridl'}, f.s);
+      text(f.s, X(tick), f.h - 8, Mv(tick, 0), 'axis', {'text-anchor':'middle'});
+    }
+    ranked.forEach(({city, point, color}, i) => {
+      const y = f.m.t + 15 + 30 * i;
+      text(f.s, f.m.l - 10, y + 4, cityName(city), 'clabel', {'text-anchor':'end'});
+      svg('line', {x1:X(point[4]), x2:X(point[5]), y1:y, y2:y, stroke:color,
+        'stroke-opacity':.35, 'stroke-width':8, 'stroke-linecap':'round'}, f.s);
+      svg('circle', {cx:X(point[3]), cy:y, r:5, fill:color}, f.s);
+    });
+    return;
+  }
   const start = Date.parse(all.map(r => r[0]).sort()[0]);
   const step = 7*86400000;
   const idx = s => Math.round((Date.parse(s)-start)/step);
@@ -1088,7 +1109,7 @@ function renderCityWeekly() {
   lineChart(chart, {w:780,h:245,m:{l:48,r:44,t:14,b:36},xMin:first-.45,xMax:last+.45,yMin:0,
     yMax:Math.max(...series.flatMap(s=>s.pts.map(p=>p[1]||0)))*1.12, yFmt:v=>Mv(v,0),
     xTicks:weeks.filter((w,i)=>i%Math.max(1,Math.ceil(weeks.length/6))===0), xFmt:label,series,
-    crosshair:w=>weeks.includes(w)?{title:label(w),rows:rows.map((city,i)=>{
+    crosshair:w=>weeks.includes(w)?{title:T.cw_week + ' ' + label(w),rows:rows.map((city,i)=>{
       const r=by[i][w]; return {k:cityName(city),c:colors[i],v:r?`${Mv(r[3],1)} · ${nf(r[2])} ${T.ch_ads} · ${prettyDate(r[1])}`:T.ch_empty_short};
     })}:null});
 }
