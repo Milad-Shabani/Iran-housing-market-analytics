@@ -10,8 +10,9 @@ import pandas as pd
 
 from . import geo
 from .jalali import gregorian_to_jalali, jalali_to_gregorian
-from .paths import GEO, RAW
-from .timeseries import METHOD_LABELS, index_to_jalali
+from .market import WEEKLY_CITIES
+from .paths import DATA, GEO, RAW
+from .timeseries import METHOD_LABELS, index_to_jalali, month_index
 from .valuation import premiums, to_browser
 
 TEHRAN_W = 760
@@ -56,7 +57,10 @@ def _names_fa() -> tuple[dict, dict]:
     """Persian display names: Divar's own neighbourhood catalog, and a city table."""
     h = pd.read_csv(GEO / "divar_tehran_neighbourhoods.csv")
     c = pd.read_csv(GEO / "city_names_fa.csv")
-    return dict(zip(h.slug, h.name_fa)), dict(zip(c.city_slug, c.name_fa))
+    lookup = pd.read_csv(GEO / "iran_city_lookup.csv").query("match == 'name_match'")
+    names = dict(zip(lookup.city_slug, lookup.county_fa))
+    names.update(zip(c.city_slug, c.name_fa))
+    return dict(zip(h.slug, h.name_fa)), names
 
 
 def tehran_block(hoods: pd.DataFrame, districts: pd.DataFrame) -> dict:
@@ -157,6 +161,42 @@ def iran_block(provinces: pd.DataFrame, cities: pd.DataFrame) -> dict:
             "median": _r(provinces.attrs.get("national_median", np.nan))}
 
 
+def city_monthly_block(name: str = "apartments") -> dict | None:
+    """City-month source observations. Rental rows contain separate rent and deposit quantiles."""
+    manifest = DATA / f"cities_monthly_{name}.json"
+    csv = DATA / f"cities_monthly_{name}.csv"
+    if not manifest.exists() and not csv.exists():
+        return None
+    meta = json.loads(manifest.read_text(encoding="utf-8"))
+    rows = pd.read_csv(csv, dtype={"city_slug": str, "month": str})
+    columns = ["listings", "median", "p25", "p75"] if name == "apartments" else [
+        "listings", "rent_median", "rent_p25", "rent_p75", "deposit_median", "deposit_p25", "deposit_p75"]
+    if (rows.duplicated(["city_slug", "month"]).any() or len(rows) != meta["city_months"]
+            or rows.city_slug.nunique() != meta["cities"] or rows.listings.sum() != meta["displayed_listings"]):
+        raise ValueError(f"The {name} table does not reconcile with its source manifest")
+    _, names = _names_fa()
+    cities = []
+    for slug, group in rows.sort_values("month").groupby("city_slug"):
+        points = [[month, *map(int, values)] for month, *values in
+                  group[["month", *columns]].itertuples(index=False, name=None)]
+        cities.append({"s": slug, "en": pretty(slug), "fa": names.get(slug), "rows": points})
+    return {"meta": meta, "cities": cities}
+
+
+def city_weekly_block() -> dict:
+    """Weekly sale-map observations, intentionally disjoint from the research archive."""
+    path = RAW / "divar_weekly" / "city_snapshots.csv"
+    groups = {slug: {"en": pretty(slug), "fa": fa, "rows": []} for slug, fa in WEEKLY_CITIES.items()}
+    if path.exists():
+        rows = pd.read_csv(path, dtype={"date": str, "week": str})
+        if rows.duplicated(["city", "week"]).any():
+            raise ValueError("duplicate city/week in Divar weekly snapshots")
+        for r in rows.sort_values("date").itertuples(index=False):
+            groups[r.city]["rows"].append([r.week, r.date, int(r.listings), int(r.median_toman_m2),
+                                           int(r.p25_toman_m2), int(r.p75_toman_m2), int(r.neighbourhoods)])
+    return groups
+
+
 def build_dashboard_data(*, hoods, districts, provinces, cities, satellites, series, leaderboard, bands,
                          official_paths, last_cbi, g_long, g_kilid, cv, model, interval, oof, report) -> dict:
     districts.attrs["tehran_median"] = report["tehran_median_ppm2_2024"]
@@ -176,20 +216,21 @@ def build_dashboard_data(*, hoods, districts, provinces, cities, satellites, ser
         jy, jm = index_to_jalali(last_cbi + h)
         fut_off.append({"h": h, "y": jy, "m": jm, "date": jalali_to_gregorian(jy, jm).isoformat()})
 
-    starts = [jalali_to_gregorian(*index_to_jalali(t)) for t in range(0, 200)]
-
     def greg_to_t(ym: str) -> int:
-        from datetime import date as _d
-        mid = _d(int(ym[:4]), int(ym[5:7]), 15)
-        return max(t for t, st in enumerate(starts) if st <= mid)
+        jy, jm, _ = gregorian_to_jalali(date.fromisoformat(ym + "-15"))
+        return int(month_index(jy, jm))
 
-    from .market import load_divar_snapshots
-    snaps = load_divar_snapshots()
+    from .market import load_comparable_divar_snapshots
+    snaps = load_comparable_divar_snapshots()
     live = []
-    for r in snaps[snaps.scope == "tehran"].itertuples():
-        d = pd.Timestamp(r.collected_on).date()
-        t = max(t for t, st in enumerate(starts) if st <= d)
-        live.append({"date": str(r.collected_on), "t": t, "p": _r(r.ppm2), "n": _r(r.listings)})
+    for r in snaps[snaps.scope == "tehran"].sort_values("collected_on").itertuples():
+        observed = date.fromisoformat(r.collected_on)
+        year, month, day = gregorian_to_jalali(observed)
+        t = int(month_index(year, month))
+        start = jalali_to_gregorian(year, month)
+        end = jalali_to_gregorian(*index_to_jalali(t + 1))
+        x = t + (day - 1) / (end - start).days
+        live.append({"date": r.collected_on, "t": t, "x": round(x, 4), "p": _r(r.ppm2), "n": _r(r.listings)})
 
     mi = pd.read_csv(RAW / "divar_1m" / "major_cities_monthly_index.csv")
     major = [{"city": r.city_slug, "month": r.listing_month[:7], "t": greg_to_t(r.listing_month[:7]), "n": int(r.listings),
@@ -224,6 +265,9 @@ def build_dashboard_data(*, hoods, districts, provinces, cities, satellites, ser
                         "p24": _r(r.ppm2_2024), "g": _r(r.growth_multiple, 3)} for r in satellites.itertuples()],
         "series": {"months": months, "last_cbi": last_cbi, "last_kilid": int(last_kil.t), "divar_live": live},
         "major": major,
+        "city_monthly": city_monthly_block(),
+        "city_rentals": city_monthly_block("rentals"),
+        "city_weekly": city_weekly_block(),
         "forecast": {
             "best": lb.method.iat[0],
             "labels": {k: {"en": v[0], "fa": v[1]} for k, v in METHOD_LABELS.items()},

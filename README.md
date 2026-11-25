@@ -4,7 +4,7 @@
 
 [![Live dashboard](https://img.shields.io/badge/live-dashboard-2a78d6?style=flat-square)](https://milad-shabani.github.io/Iran-housing-market-analytics/)
 [![Persian edition](https://img.shields.io/badge/نسخه-فارسی-0d366b?style=flat-square)](https://milad-shabani.github.io/Iran-housing-market-analytics/index.fa.html)
-[![Tests](https://img.shields.io/badge/tests-48%20passing-1baf7a?style=flat-square)](#tests)
+[![Tests](https://github.com/Milad-Shabani/Iran-housing-market-analytics/actions/workflows/ci.yml/badge.svg)](#tests)
 [![Dependencies](https://img.shields.io/badge/dashboard%20dependencies-none-52514e?style=flat-square)](#how-it-is-built)
 [![License](https://img.shields.io/badge/code-MIT-666?style=flat-square)](LICENSE)
 
@@ -98,7 +98,7 @@ data/raw  ──►  src/iran_housing  ──►  data/processed  ──►  das
 pip install -r requirements.txt
 python scripts/run_pipeline.py      # clean, locate, summarise, model, forecast -> data/processed/
 python scripts/build_dashboard.py   # -> site/index.html and site/index.fa.html
-pytest -q                           # 48 tests
+pytest -q
 ```
 
 `make all` does the same. To refresh or audit the raw layer from the upstream files: `python scripts/fetch_sources.py --check`, then `python scripts/prepare_geo.py`.
@@ -126,14 +126,50 @@ The first full collection (4 Mehr 1405, 26 Sep 2026) returned 172,178 ads, 170,3
 passed the filters; Divar's neighbourhood tag agreed with the ad's location for 99.9% of them.
 Tehran came to 262 M toman/m², against 94.1 M in 1403 by the same method (×2.8).
 
-### Keeping it current automatically
+### City prices, monthly rents and deposits
 
-[`.github/workflows/refresh-data.yml`](.github/workflows/refresh-data.yml) runs the same three
-steps every Friday, appends the week's medians to `data/raw/divar_1405/snapshots.csv` (so the
-trend chart gains a Divar point each week), commits, and republishes the site. It is off until
-you add the repository variable `DATA_REFRESH = on` (Settings → Secrets and variables → Actions →
-Variables). GitHub's own servers reach Divar: the collection above ran on one in about 15 minutes.
-A self-hosted runner inside Iran (`REFRESH_RUNNER = self-hosted`) is only a fallback if that changes.
+In the Iran section, compare up to three cities by monthly sale price per m², monthly rent per
+apartment or upfront deposit per apartment. The selected metric, cities and date range also
+apply to the downloadable CSV. The table includes quartiles, the sample count and change from
+the immediately preceding calendar month.
+
+| Divar apartment archive | Cities | Displayed city-months | Listed apartments | Coverage |
+|---|---:|---:|---:|---|
+| Sale price per m² | 81 | 577 | 274,983 | March 2024 to January 2025 |
+| Monthly rent and upfront deposit | 66 | 418 | 142,524 | April 2024 to January 2025 |
+
+Both rental amounts come from the same ads quoting a positive fixed rent and deposit. Each
+city-month needs at least 50 eligible apartments of 20–1,000 m². The archive uses Gregorian
+months and does not specify its currency denomination. The two manifests in `data/cities_monthly_*.json`
+give the source revision, filters and file hashes. To reproduce the CSVs, pass the original CSV
+or both complete Parquet shards to `python scripts/build_city_monthly.py` (install PyArrow for
+Parquet input). [Divar public archive, ODbL](https://huggingface.co/datasets/divarofficial/real_estate_ads)
+
+### Weekly refresh
+
+[Refresh Divar data](.github/workflows/refresh-data.yml) is scheduled for Fridays at 03:17 UTC
+(06:47 Tehran). It collects fresh listings, validates the observations, rebuilds both languages,
+runs the tests and publishes accepted updates. The repository variable `DATA_REFRESH=off`
+pauses scheduled runs. `REFRESH_RUNNER` can designate a self-hosted runner. The manual workflow
+supports a test run and an explicit publish option on the default branch.
+
+* **Tehran.** The collector walks the neighbourhood catalogue and checks all 22 municipal
+  districts and at least half the previous usable listing count. Incomplete attempts keep
+  the last accepted maps and prices. The partial 2 October 2026 observation remains in
+  [raw history](data/raw/divar_1405/snapshots.csv) with its [coverage flag](data/raw/divar_1405/snapshot_quality.csv).
+* **Mashhad, Karaj, Isfahan and Shiraz.** The collector surveys 48 fixed neighbourhoods per
+  city. The panel draws eight longitude strata from each of six latitude bands in Divar’s
+  neighbourhood catalogue. It reads up to 200 apartment-sale cards per fixed rectangle, removes
+  duplicate listing IDs, then computes the median and quartiles across usable cards. These are
+  panel estimates. Active ads and densely listed areas can have different sampling rates.
+  Each city must complete all 48 requests, retain the same panel, and have at least 100 usable
+  ads and half its previous accepted count. Reruns replace the same Saturday–Friday week.
+  The public history stores only city aggregates and each city advances independently.
+
+To refresh locally, run `python scripts/collect_divar.py refresh` for Tehran and
+`python scripts/collect_city_weekly.py` for the four city panels, then rebuild the pipeline
+and dashboard. A new candidate panel can be inspected with
+`python scripts/collect_city_weekly.py --build-panel /tmp/panel.csv`.
 
 ### About the earlier draft's 1405 figures
 
@@ -145,7 +181,7 @@ figures in this dashboard come from Kilid's published indicator and, once collec
 
 ## Tests
 
-48 tests in [`tests/`](tests/): Jalali calendar conversion, raw-file shapes, every official value carrying a URL, unit consistency across the Central Bank transcriptions, landmarks (Tajrish, Vanak, Azadi Tower, Chitgar lake, Shahr-e Rey) landing in the right district, the north–south gradient, Tehran as the most expensive province, the model beating its baseline, forecasts using only past data, both pages being free of external requests, every period in the page data using the same fields, and the Divar collector's parsing and aggregation.
+Tests in [`tests/`](tests/): Jalali calendar conversion, raw-file shapes, every official value carrying a URL, unit consistency across the Central Bank transcriptions, landmarks (Tajrish, Vanak, Azadi Tower, Chitgar lake, Shahr-e Rey) landing in the right district, the north–south gradient, Tehran as the most expensive province, the model beating its baseline, forecasts using only past data, both pages being free of external requests, every period in the page data using the same fields, and the Divar collector's parsing and aggregation.
 
 ## Repository layout
 

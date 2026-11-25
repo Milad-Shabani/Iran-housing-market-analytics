@@ -37,8 +37,11 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from datetime import date, datetime, timezone
+from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path
+from threading import Lock
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -58,6 +61,8 @@ CITIES = {  # Divar city id and a bounding box (min_lon, min_lat, max_lon, max_l
 }
 LOCAL = ROOT / "data" / "local"
 OUT = ROOT / "data" / "raw" / "divar_1405"
+TEHRAN_DISTRICTS = set(range(1, 23))
+MIN_PREVIOUS_ADS_SHARE = 0.5  # fail closed on an extraordinary drop; review before promotion
 CATALOG = ROOT / "data" / "geo" / "divar_tehran_neighbourhoods.csv"
 
 _FA = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
@@ -184,34 +189,85 @@ def _split(box):
     return [(box[0], box[1], mx, my), (mx, box[1], box[2], my), (box[0], my, mx, box[3]), (mx, my, box[2], box[3])]
 
 
-def crawl_neighbourhood(city_id: str, category: str, nb, delay: float, budget: list) -> tuple[list[dict], int]:
-    """All ads Divar tags with one neighbourhood; splits rectangles holding more than 200."""
+class IncompleteCollection(RuntimeError):
+    """The latest attempt must not replace the last accepted data."""
+
+
+class CollectionBudget:
+    def __init__(self, max_requests: int, max_minutes: float):
+        self.max_requests = max_requests
+        self.deadline = time.monotonic() + max_minutes * 60
+        self.used = 0
+        self.lock = Lock()
+
+    def claim(self) -> str | None:
+        with self.lock:
+            if time.monotonic() >= self.deadline:
+                return "time cap"
+            if self.used >= self.max_requests:
+                return "request cap"
+            self.used += 1
+            return None
+
+
+@dataclass
+class NeighbourhoodResult:
+    rows: list[dict]
+    failures: int
+    remaining: int
+    stop_reason: str | None
+
+
+def map_posts(payload: dict) -> tuple[list, int]:
+    """An empty viewport may carry only Divar's explicit Persian no-ads message."""
+    if not isinstance(payload, dict):
+        raise ValueError("expected a map response object")
+    posts = payload.get("posts")
+    count = int(payload.get("count") or 0)
+    explicit_empty = payload.get("count") in (0, "0") or payload.get("count_text") == "بدون آگهی"
+    if posts is None and explicit_empty and count == 0:
+        posts = []
+    if not isinstance(posts, list) or count < 0 or (not posts and count > 0):
+        raise ValueError("map response has no valid posts list")
+    return posts, count
+
+
+def crawl_neighbourhood(city_id: str, category: str, nb, delay: float,
+                        budget: CollectionBudget) -> NeighbourhoodResult:
+    """Walk a neighbourhood; report lost or unfinished rectangles separately from empty ones."""
     pad_x, pad_y = (nb.max_lon - nb.min_lon) * 0.15, (nb.max_lat - nb.min_lat) * 0.15
     queue = [(nb.min_lon - pad_x, nb.min_lat - pad_y, nb.max_lon + pad_x, nb.max_lat + pad_y)]
-    rows, made = [], 0
-    while queue and budget[0] > 0:
+    rows, failures = [], 0
+    stop = None
+    while queue:
+        stop = budget.claim()
+        if stop:
+            break
         box = queue.pop()
-        budget[0] -= 1
         try:
             payload = request_viewport(city_id, category, box, zoom_for(box), district_id=str(nb.divar_id))
-        except RuntimeError as exc:   # one bad rectangle must not sink the whole collection
+            posts, count = map_posts(payload)
+        except (RuntimeError, TypeError, ValueError) as exc:
             print(f"skipped a rectangle in {nb.slug}: {exc}", flush=True)
+            failures += 1
             continue
-        made += 1
-        posts = payload.get("posts") or []
         for post in posts:
             row = parse_post(post)
             if row:
                 row["slug"] = nb.slug
                 rows.append(row)
-        if int(payload.get("count") or 0) > len(posts) and len(posts) >= PAGE_LIMIT and (box[2] - box[0]) > 0.0005:
-            queue += _split(box)
+        if count > len(posts) and len(posts) >= PAGE_LIMIT:
+            if (box[2] - box[0]) > 0.0005:
+                queue += _split(box)
+            else:
+                print(f"unresolved capped rectangle in {nb.slug}", flush=True)
+                failures += 1
         time.sleep(delay)
-    return rows, made
+    return NeighbourhoodResult(rows, failures, len(queue), stop)
 
 
 def collect(city: str, category: str, delay: float, max_requests: int, probe: bool,
-            max_minutes: float = 45.0, workers: int = 3) -> Path:
+            max_minutes: float = 45.0, workers: int = 3, *, require_complete: bool = False) -> Path:
     """Walk Divar's neighbourhood catalog; each ad keeps the neighbourhood Divar assigns it.
 
     Neighbourhoods are fetched by a few parallel workers (Divar's map endpoint tolerates about
@@ -224,6 +280,8 @@ def collect(city: str, category: str, delay: float, max_requests: int, probe: bo
     import pandas as pd
     city_id, _ = CITIES[city]
     catalog = pd.read_csv(CATALOG)
+    if catalog.empty or not catalog.slug.is_unique or catalog.slug.isna().any():
+        raise IncompleteCollection("neighbourhood catalog is empty or has invalid slugs")
     LOCAL.mkdir(parents=True, exist_ok=True)
     if probe:
         nb = catalog.iloc[0]
@@ -232,51 +290,60 @@ def collect(city: str, category: str, delay: float, max_requests: int, probe: bo
         (LOCAL / "divar_probe_response.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1),
                                                          encoding="utf-8")
         print("probe: first raw response saved to data/local/divar_probe_response.json", flush=True)
-    today = date.today().isoformat()
+    today = datetime.now(ZoneInfo("Asia/Tehran")).date().isoformat()
     path = LOCAL / f"divar_{city}_{category}_{today}.csv"
     cols = ["token", "slug", "lat", "lon", "approximate_location", "price_toman", "price_per_m2_toman", "size_m2",
             "rooms", "age_years", "parking", "elevator", "price_text"]
     seen: set[str] = set()
-    budget = [max_requests]
-    made = done = 0
+    budget = CollectionBudget(max_requests, max_minutes)
+    done = failed = remaining = 0
+    stops = set()
     started = time.monotonic()
-    stopped = None
     pending = list(catalog.itertuples())
-    with path.open("w", newline="", encoding="utf-8") as fh, ThreadPoolExecutor(max_workers=workers) as pool:
+    partial = path.with_suffix(".csv.partial")
+    with partial.open("w", newline="", encoding="utf-8") as fh, ThreadPoolExecutor(max_workers=workers) as pool:
         writer = csv.DictWriter(fh, fieldnames=cols + ["collected_on"])
         writer.writeheader()
         running = set()
         while pending or running:
-            over_time = (time.monotonic() - started) / 60 > max_minutes
-            if over_time and not stopped:
-                stopped = f"time budget of {max_minutes:.0f} min reached"
-            while pending and len(running) < workers and not stopped and budget[0] > 0:
+            while pending and len(running) < workers and not stops:
                 running.add(pool.submit(crawl_neighbourhood, city_id, category, pending.pop(0), delay, budget))
             if not running:
                 break
             finished, running = wait(running, return_when=FIRST_COMPLETED)
             for fut in finished:
-                rows, n = fut.result()
-                made += n
-                done += 1
-                for row in rows:
+                result = fut.result()
+                failed += result.failures
+                remaining += result.remaining
+                if result.stop_reason:
+                    stops.add(result.stop_reason)
+                done += int(not result.failures and not result.remaining)
+                for row in result.rows:
                     if row["token"] not in seen:
                         seen.add(row["token"])
                         writer.writerow({**{c: row.get(c) for c in cols}, "collected_on": today})
                 fh.flush()
                 if done == 1 or done % 25 == 0:
                     mins = (time.monotonic() - started) / 60
-                    print(f"{done}/{len(catalog)} neighbourhoods, {made} requests, {len(seen):,} ads, {mins:.1f} min",
+                    print(f"{done}/{len(catalog)} neighbourhoods, {budget.used} viewport requests, {len(seen):,} ads, {mins:.1f} min",
                           flush=True)
-        if budget[0] <= 0 and not stopped:
-            stopped = "request cap reached"
-    print(f"{'INCOMPLETE: ' + stopped if stopped else 'complete'}: {len(seen):,} ads from {done} neighbourhoods "
-          f"in {made} requests -> {path}", flush=True)
+    message = (f"{len(seen):,} ads; {done}/{len(catalog)} neighbourhoods completed; "
+               f"{failed} failed and {remaining} unfinished rectangles; {len(pending)} unstarted neighbourhoods; "
+               f"{budget.used} viewport requests"
+               + (f"; {', '.join(sorted(stops))}" if stops else ""))
+    complete = done == len(catalog) and bool(seen)
+    if complete:
+        partial.replace(path)
+    else:
+        path = partial
+    print(f"{'complete' if complete else 'INCOMPLETE'}: {message} -> {path}", flush=True)
+    if require_complete and not complete:
+        raise IncompleteCollection(message)
     return path
 
 
 # --------------------------------------------------------------------------- aggregation
-def aggregate(raw_path: Path, out_dir: Path | None = None) -> None:
+def aggregate(raw_path: Path, out_dir: Path | None = None, *, require_coverage: bool = False) -> None:
     import numpy as np
     import pandas as pd
 
@@ -287,7 +354,8 @@ def aggregate(raw_path: Path, out_dir: Path | None = None) -> None:
     ads = ads[ads.size_m2.between(20, 1000) & ads.price_per_m2_toman.between(5e6, 2e9)]
     lp = np.log(ads.price_per_m2_toman)
     mad = np.median(np.abs(lp - lp.median())) * 1.4826
-    ads = ads[((lp - lp.median()).abs() / mad) <= 4]
+    if mad > 0:
+        ads = ads[((lp - lp.median()).abs() / mad) <= 4]
     # districts: vectorised point-in-polygon against the 22 municipal districts
     import shapely
     from shapely.geometry import shape
@@ -301,6 +369,20 @@ def aggregate(raw_path: Path, out_dir: Path | None = None) -> None:
     ads["district"] = district
     ads = ads[ads.district.notna()].reset_index(drop=True)
 
+    out = Path(out_dir) if out_dir else OUT
+    if require_coverage:
+        missing = TEHRAN_DISTRICTS - set(ads.district.astype(int))
+        previous = out / "meta.json"
+        prior = json.loads(previous.read_text(encoding="utf-8")) if previous.exists() else {}
+        previous_ads = prior.get("ads_used", 0)
+        print(f"Coverage: {len(ads):,} usable ads (previous: {previous_ads:,}); "
+              f"{ads.district.nunique()}/22 districts; missing: {sorted(missing)}", flush=True)
+        if missing or len(ads) < previous_ads * MIN_PREVIOUS_ADS_SHARE:
+            raise IncompleteCollection("coverage check failed; inspect missing districts and listing volume")
+        if "collected_on" not in ads or ads.collected_on.isna().any() or ads.collected_on.nunique() != 1:
+            raise IncompleteCollection("expected exactly one non-null snapshot date")
+        if prior.get("collected_on", "") > str(ads.collected_on.iloc[0]):
+            raise IncompleteCollection("a newer accepted Tehran observation already exists")
     # neighbourhoods: keep Divar's tag when the ad sits inside that neighbourhood's box,
     # otherwise use the nearest catalog centroid (vectorised, in chunks)
     cat = pd.read_csv(CATALOG).set_index("slug")
@@ -332,7 +414,6 @@ def aggregate(raw_path: Path, out_dir: Path | None = None) -> None:
                           "rooms_median": col("rooms").median(), "build_year": jy - col("age_years").median(),
                           "parking_share": g.parking.mean(), "elevator_share": g.elevator.mean()})
 
-    out = Path(out_dir) if out_dir else OUT
     out.mkdir(parents=True, exist_ok=True)
     collected = str(ads.collected_on.iloc[0]) if "collected_on" in ads and len(ads) else ""
     dtab = ads.groupby("district").apply(summarise, include_groups=False).reset_index()
@@ -342,7 +423,7 @@ def aggregate(raw_path: Path, out_dir: Path | None = None) -> None:
     # price levels use the same method as the 1403 figures they are compared with:
     # listing-weighted quantiles of neighbourhood medians (neighbourhoods with 10+ ads)
     from iran_housing.market import wquantile
-    big = htab[htab.listings >= 10]
+    big = htab[htab.listings >= 10].copy()
 
     def level(h, fallback):
         if h.empty:
@@ -354,7 +435,7 @@ def aggregate(raw_path: Path, out_dir: Path | None = None) -> None:
                                                               row[["ppm2", "ppm2_p25", "ppm2_p75"]]).values
     q = ads.price_per_m2_toman.quantile([.5, .25, .75]).to_numpy()
     tehran = level(big, pd.Series(q, index=["ppm2", "ppm2_p25", "ppm2_p75"]))
-    for t in (dtab, htab):
+    for t in (dtab, big):
         t["collected_on"] = collected
     dtab.to_csv(out / "tehran_districts_1405.csv", index=False)
     big.to_csv(out / "tehran_neighbourhoods_1405.csv", index=False)
@@ -392,16 +473,30 @@ def main() -> int:
     c.add_argument("--probe", action="store_true", help="save the first raw response for inspection")
     c.add_argument("--max-minutes", type=float, default=45.0, help="stop cleanly and keep what was collected")
     c.add_argument("--workers", type=int, default=3, help="parallel neighbourhoods (keep it small)")
-    a = sub.add_parser("aggregate")
+    r = sub.add_parser("refresh", help="collect and promote only after both coverage checks pass")
+    r.add_argument("--max-minutes", type=float, default=50)
+    r.add_argument("--max-requests", type=int, default=8000)
+    a = sub.add_parser("aggregate", help="validate and aggregate a completed local collection")
     a.add_argument("raw", nargs="?", help="raw CSV from `collect` (default: newest in data/local)")
     args = ap.parse_args()
     if args.cmd == "catalog":
         refresh_catalog()
     elif args.cmd == "collect":
         collect(args.city, args.category, args.delay, args.max_requests, args.probe, args.max_minutes, args.workers)
+    elif args.cmd == "refresh":
+        try:
+            raw = collect("tehran", "apartment-sell", 0.3, args.max_requests, False,
+                          args.max_minutes, require_complete=True)
+            aggregate(raw, require_coverage=True)
+        except IncompleteCollection as exc:
+            print(f"Refresh rejected; last accepted dashboard data kept: {exc}", file=sys.stderr)
+            return 1
     else:
         raw = Path(args.raw) if args.raw else max(LOCAL.glob("divar_tehran_*.csv"), key=lambda p: p.stat().st_mtime)
-        aggregate(raw)
+        if raw.suffix == ".partial":
+            print("Incomplete collection. The last accepted Tehran figures were retained.", file=sys.stderr)
+            return 1
+        aggregate(raw, require_coverage=True)
     return 0
 
 

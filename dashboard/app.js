@@ -80,6 +80,7 @@ const G_LONG = Math.expm1(12 * D.forecast.g_long), G_KIL = Math.expm1(12 * D.for
 // Every figure belongs to one period. rec(o, y) returns an object's figures for year y (same
 // short keys in every period) or null, so an indicator without data for that year shows "–".
 const LIVE = D.meta.divar_1405 || null;
+const liveYear = LIVE?.collected_on_jalali?.[0] ?? 1405;
 const liveDate = () => {
   if (!LIVE) return '';
   const j = LIVE.collected_on_jalali;
@@ -87,20 +88,21 @@ const liveDate = () => {
   return FA ? `${nf(j[2])} ${MFA[j[1] - 1]} ${yr(j[0])}` : `${j[2]} ${MEN[j[1] - 1]} ${j[0]}`;
 };
 const liveGreg = () => LIVE ? new Date(LIVE.collected_on + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '';
-const MAP_YEARS = LIVE ? [1400, 1403, 1405] : [1400, 1403];
-const YEARS = Array.from({ length: 11 }, (_, i) => 1395 + i);
+const MAP_YEARS = LIVE ? [1400, 1403, liveYear] : [1400, 1403];
+const lastYear = Math.max(lastKil.y, LIVE ? liveYear : 0);
+const YEARS = Array.from({ length: lastYear - 1395 + 1 }, (_, i) => 1395 + i);
 const PER = {
   1400: { lab: FA ? 'حدود ۱۴۰۰' : 'c. 1400', src: FA ? `نمونه‌ی ${nf(D.meta.listings_2021)} آگهی دیوار` : `Divar sample, ${nf(D.meta.listings_2021)} ads` },
   1403: { lab: FA ? '۱۴۰۳' : '1403', src: FA ? `${nf(D.meta.tehran_listings_located)} آگهی دیوار` : `${nf(D.meta.tehran_listings_located)} Divar ads` },
 };
-if (LIVE) PER[1405] = { lab: liveDate(), src: FA ? `${nf(LIVE.ads_used)} آگهی دیوار` : `${nf(LIVE.ads_used)} Divar ads, collected ${liveGreg()}` };
+if (LIVE) PER[liveYear] = { lab: liveDate(), src: FA ? `${nf(LIVE.ads_used)} آگهی دیوار` : `${nf(LIVE.ads_used)} Divar ads, collected ${liveGreg()}` };
 const pLab = y => PER[y] ? PER[y].lab : yr(y);
 const span2 = (a, b) => FA ? `${pLab(a)} تا ${pLab(b)}` : `${pLab(a)} → ${pLab(b)}`;
 const prevYear = y => { const i = MAP_YEARS.indexOf(y); return i > 0 ? MAP_YEARS[i - 1] : null; };
 function rec(o, y) {
   if (!o) return null;
   if (y === 1403) return o.p != null ? o : null;
-  if (y === 1405) return o.y5 || null;
+  if (LIVE && y === liveYear) return o.y5 || null;
   if (y === 1400) return o.y0 && o.y0.p != null ? o.y0 : null;
   return null;
 }
@@ -115,9 +117,9 @@ function wq(pairs, q = 0.5) {   // listing-weighted quantile, same interpolation
   return v[v.length - 1][0];
 }
 const TMED = { 1400: D.meta.tehran_median_2021, 1403: TEHRAN_MED };
-if (LIVE) TMED[1405] = LIVE.tehran_median_ppm2;
+if (LIVE) TMED[liveYear] = LIVE.tehran_median_ppm2;
 const TYP = {};   // typical listing price and size, listing-weighted over neighbourhoods
-[1403, 1405].forEach(y => { const hs = HOODS.filter(x => rec(x, y)); if (hs.length) TYP[y] = { pm: wq(hs.map(x => [val(x, 'pm', y), val(x, 'n', y)])), sz: wq(hs.map(x => [val(x, 'sz', y), val(x, 'n', y)])) }; });
+MAP_YEARS.filter(y => y >= 1403).forEach(y => { const hs = HOODS.filter(x => rec(x, y)); if (hs.length) TYP[y] = { pm: wq(hs.map(x => [val(x, 'pm', y), val(x, 'n', y)])), sz: wq(hs.map(x => [val(x, 'sz', y), val(x, 'n', y)])) }; });
 const lastIn = (y, k) => MONTHS.filter(m => m.y === y && m[k] != null).pop() || null;
 const noData = y => FA ? `برای ${pLab(y)} داده نداریم` : `no data for ${pLab(y)}`;
 const rankOf = (d, y) => { const v = val(d, 'p', y); return v == null ? null : DIST.filter(o => (val(o, 'p', y) || 0) > v).length + 1; };
@@ -216,7 +218,7 @@ function zoomable(svgEl, g, box, onZoom) {
 
 // ------------------------------------------------------------------ shared state
 const S = {
-  scope: { type: 'tehran' }, year: LIVE ? 1405 : 1403,
+  scope: { type: 'tehran' }, year: LIVE ? liveYear : 1403,
   tMetric: 'p', tLayer: 'd', budgetOn: false, budget: 8e9, bSize: 75, legendBin: null,
   iMetric: 'p', iCities: false,
   hood: 'saadat-abad', area: 90, rooms: 2, parking: 1, storage: 1, elevator: 1, roll: 0,
@@ -355,7 +357,7 @@ DIST.forEach(d => {
   p.addEventListener('keydown', ev => { if (ev.key === 'Enter') setScope({ type: 'district', d: d.d }); });
   text(tLabG, d.lx, d.ly, nf(d.d), 'dlabel');
 });
-HOODS.slice().sort((a, b) => Math.max(b.n, val(b, 'n', 1405) || 0) - Math.max(a.n, val(a, 'n', 1405) || 0)).forEach(x => {
+HOODS.slice().sort((a, b) => Math.max(b.n, val(b, 'n', liveYear) || 0) - Math.max(a.n, val(a, 'n', liveYear) || 0)).forEach(x => {
   const c = svg('circle', { cx: x.x, cy: x.y, r: 3, 'data-r': 3, class: 'hood', 'data-s': x.s }, tHoodG);
   c.addEventListener('pointermove', ev => hoodTip(ev, x));
   c.addEventListener('pointerleave', hideTip);
@@ -583,7 +585,7 @@ function renderCatch() {
   const title = $('#catchTitle'), desc = $('#catchDesc');
   if (ds.length < 5) {
     title.textContent = FA ? 'کدام منطقه‌ها سریع‌تر گران شدند؟' : 'Which districts rose faster?';
-    desc.textContent = FA ? 'این نمودار دو دوره‌ی پشت سر هم لازم دارد. در نوار زمان ۱۴۰۳ یا ۱۴۰۵ را انتخاب کنید.' : 'This chart needs two consecutive periods. Pick 1403 or the latest year on the year bar.';
+    desc.textContent = FA ? 'برای مقایسه با دورهٔ قبل، یکی از دوره‌های زیر را انتخاب کنید.' : 'Select a period below to compare with the previous observation.';
     clear(el).appendChild(h('div', { cls: 'chips' }, MAP_YEARS.filter(prevYear).map(v => h('button', { cls: 'chip', text: pLab(v), onclick: () => setYear(v) }))));
     return;
   }
@@ -915,6 +917,182 @@ function renderMajor() {
   });
 }
 
+// ------------------------------------------------------------------ independent city-month archive
+function initCityHistory() {
+  if (!D.city_monthly?.cities?.length) return;
+  const root = $('#cityHistory');
+  root.hidden = false;
+  const dateIndex = m => Number(m.slice(0, 4)) * 12 + Number(m.slice(5)) - 1;
+  const isoMonth = t => String(Math.floor(t / 12)) + '-' + String(t % 12 + 1).padStart(2, '0');
+  const monthLabel = t => iso(FA ? isoMonth(t).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]) : isoMonth(t));
+  const colors = ['#1469b5', '#b84c13', '#087d65'];
+  const selectors = [$('#chCity1'), $('#chCity2'), $('#chCity3')];
+  const from = $('#chFrom'), to = $('#chTo'), month = $('#chMonth'), metric = $('#chMetric');
+  const addOption = (select, value, label) => select.appendChild(h('option', { value, text: label }));
+  const price = v => Mv(v, 1);
+  let by = {}, months = [];
+  const selected = () => selectors.map((s, i) => ({ city: by[s.value], color: colors[i] })).filter(v => v.city);
+
+  function chooseMetric() {
+    const sale = metric.value === 'sale', deposit = metric.value === 'deposit';
+    const archive = sale ? D.city_monthly : D.city_rentals;
+    const meta = archive.meta, lo = dateIndex(meta.first_month), hi = dateIndex(meta.last_month);
+    months = Array.from({length: hi - lo + 1}, (_, i) => lo + i);
+    const cities = archive.cities.slice().sort((a, b) => cityName(a).localeCompare(cityName(b), LOC));
+    by = {};
+    for (const city of cities) {
+      const rows = city.rows.map(r => [r[0], r[1], ...r.slice(deposit ? 5 : 2, deposit ? 8 : 5)]);
+      by[city.s] = {...city, rows, byMonth: Object.fromEntries(rows.map(r => [dateIndex(r[0]), r]))};
+    }
+    selectors.forEach((select, i) => {
+      const previous = select.options.length ? select.value : ['tehran', 'mashhad', 'isfahan'][i];
+      clear(select);
+      if (i) addOption(select, '', T.ch_none);
+      for (const city of cities) addOption(select, city.s, cityName(city));
+      select.value = by[previous] ? previous : (i ? '' : cities[0].s);
+    });
+    const oldFrom = from.value, oldTo = to.value;
+    clear(from); clear(to);
+    for (const t of months) { addOption(from, t, monthLabel(t)); addOption(to, t, monthLabel(t)); }
+    const broad = months.filter(t => cities.filter(c => by[c.s].byMonth[t]).length >= cities.length / 2);
+    from.value = oldFrom ? Math.max(lo, Math.min(+oldFrom, hi)) : (broad[0] ?? lo);
+    to.value = oldTo ? Math.max(+from.value, Math.min(+oldTo, hi)) : (broad.at(-1) ?? hi);
+    $('#chCoverage').textContent = FA
+      ? `${nf(meta.cities)} شهر · ${nf(meta.displayed_listings)} آگهی · ${monthLabel(lo)} تا ${monthLabel(hi)} (میلادی)`
+      : `${nf(meta.cities)} cities · ${nf(meta.displayed_listings)} listings · ${monthLabel(lo)} to ${monthLabel(hi)} (Gregorian)`;
+    $('#chDesc').textContent = sale ? T.ch_desc : T.ch_rental_desc;
+    $('#chUnits').textContent = sale ? T.ch_units : T.ch_rental_units;
+    $('#chChart').setAttribute('aria-label', metric.selectedOptions[0].text);
+    render();
+  }
+
+  function renderTable() {
+    const target = clear($('#chTable'));
+    const t = Number(month.value);
+    const table = h('table', { cls: 't' });
+    const thead = h('thead'), tr = h('tr'), body = h('tbody');
+    [T.ch_city, metric.selectedOptions[0].text, T.ch_iqr, T.ch_ads, T.ch_change].forEach(label => tr.appendChild(h('th', { scope: 'col', text: label })));
+    thead.appendChild(tr);
+    for (const {city} of selected()) {
+      const r = city.byMonth[t], prev = city.byMonth[t - 1];
+      const vals = [cityName(city), r ? price(r[2]) : '–',
+        r ? `${price(r[3])} – ${price(r[4])}` : '–', r ? nf(r[1]) : '–',
+        r && prev ? spct(r[2] / prev[2] - 1, 1) : '–'];
+      body.appendChild(h('tr', {}, vals.map(v => h('td', { text: v }))));
+    }
+    table.append(thead, body);
+    target.appendChild(table);
+  }
+
+  function render() {
+    const a = Number(from.value), b = Number(to.value), chosen = selected();
+    const ts = months.filter(t => t >= a && t <= b);
+    const focus = month.value ? Number(month.value) : b;
+    clear(month);
+    for (const t of ts) addOption(month, t, monthLabel(t));
+    month.value = ts.includes(focus) ? focus : b;
+    const key = clear($('#chKey')), chart = clear($('#chChart'));
+    const series = chosen.map(({city, color}) => {
+      key.appendChild(h('span', {}, [h('i', { style: `background:${color}` }), cityName(city)]));
+      return {color, dots: true, pts: ts.map(t => [t, city.byMonth[t]?.[2] ?? null])};
+    });
+    const values = series.flatMap(s => s.pts.map(p => p[1]).filter(v => v != null));
+    if (!values.length) {
+      chart.appendChild(h('p', { cls: 'note', text: T.ch_empty }));
+    } else {
+      lineChart(chart, {w: 780, h: 270, m: {l: 49, r: 32, t: 14, b: 36},
+        xMin: a - .45, xMax: b + .45, yMin: 0, yMax: Math.max(...values) * 1.12,
+        xTicks: ts.filter((t, i) => i % Math.max(1, Math.ceil(ts.length / 7)) === 0),
+        xFmt: monthLabel, yFmt: v => Mv(v, 0), series,
+        crosshair: t => ts.includes(t) ? {title: monthLabel(t),
+          rows: chosen.map(({city, color}) => {
+            const r = city.byMonth[t];
+            return { k: cityName(city), c: color, v: r ? `${price(r[2])} · ${nf(r[1])} ${T.ch_ads}` : T.ch_empty_short };
+          }),
+        } : null,
+      });
+    }
+    $('#chCSV').disabled = !values.length;
+    renderTable();
+  }
+
+  selectors.forEach(s => {
+    s.addEventListener('change', () => {
+      for (const other of selectors) {
+        if (other === s || !s.value || other.value !== s.value) continue;
+        if (other === selectors[0]) s.value = '';
+        else other.value = '';
+      }
+      render();
+    });
+  });
+  metric.addEventListener('change', chooseMetric);
+  if (!D.city_rentals?.cities?.length) {
+    for (const option of [...metric.options].slice(1)) option.disabled = true;
+  }
+  from.addEventListener('change', () => { if (+from.value > +to.value) to.value = from.value; render(); });
+  to.addEventListener('change', () => { if (+to.value < +from.value) from.value = to.value; render(); });
+  month.addEventListener('change', renderTable);
+  $('#chCSV').addEventListener('click', () => {
+    const suffix = {sale: 'asking_price_per_m2', rent: 'monthly_rent_per_apartment', deposit: 'deposit_per_apartment'}[metric.value];
+    const rows = [['city_slug', 'month_gregorian', 'listings', ...['median','p25','p75'].map(q => q + '_' + suffix + '_source_units')].join(',')];
+    for (const {city} of selected()) {
+      for (const r of city.rows) {
+        const t = dateIndex(r[0]);
+        if (t >= +from.value && t <= +to.value) rows.push([city.s, ...r].join(','));
+      }
+    }
+    const url = URL.createObjectURL(new Blob([rows.join('\r\n') + '\r\n'], {type: 'text/csv;charset=utf-8'}));
+    const a = h('a', {href: url, download: 'divar-city-month-' + metric.value + '.csv'});
+    root.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  chooseMetric();
+}
+
+// ------------------------------------------------------------------ weekly snapshots; never joined to the old archive
+function renderCityWeekly() {
+  const block = D.city_weekly;
+  if (!block) return;
+  $('#cityWeekly').hidden = false;
+  const colors = ['#1469b5', '#087d65', '#b84c13', '#945ba0'];
+  const chart = clear($('#cwChart')), key = clear($('#cwKey')), wrap = clear($('#cwTable'));
+  const rows = Object.values(block);
+  const dateFormat = new Intl.DateTimeFormat(LOC, {year:'numeric', month:'short', day:'numeric', timeZone:'UTC'});
+  const prettyDate = s => iso(dateFormat.format(new Date(s + 'T00:00:00Z')));
+  const table = h('table', {cls: 't'}), head = h('tr'), body = h('tbody');
+  for (const label of [T.ch_city, T.cw_date, T.ch_price, T.ch_iqr, T.cw_change, T.ch_ads, T.cw_hoods]) head.appendChild(h('th', {scope: 'col', text:label}));
+  table.append(h('thead', {}, head), body);
+  for (const city of rows) {
+    const last = city.rows.at(-1);
+    const prev = city.rows.at(-2);
+    const adjacent = prev && Date.parse(last[0]) - Date.parse(prev[0]) === 7 * 86400000;
+    const values = [cityName(city), last ? prettyDate(last[1]) : T.cw_wait,
+      last ? Mv(last[3], 1) : '–', last ? iso(Mv(last[4], 1) + ' – ' + Mv(last[5], 1)) : '–',
+      adjacent ? spct(last[3] / prev[3] - 1, 1) : '–', last ? nf(last[2]) : '–', last ? nf(last[6]) : '–'];
+    body.appendChild(h('tr', {}, values.map(v => h('td', {text:v}))));
+  }
+  wrap.appendChild(table);
+  const all = rows.flatMap(c => c.rows);
+  if (!all.length) { chart.appendChild(h('p', {cls:'note', text:T.cw_empty})); return; }
+  const start = Date.parse(all.map(r => r[0]).sort()[0]);
+  const step = 7*86400000;
+  const idx = s => Math.round((Date.parse(s)-start)/step);
+  const last = Math.max(...all.map(r => idx(r[0]))), first = Math.max(0, last-51);
+  const weeks = Array.from({length:last-first+1}, (_,i) => first+i);
+  const by = rows.map(c => Object.fromEntries(c.rows.map(r => [idx(r[0]), r])));
+  const series = rows.map((city,i) => {
+    if (weeks.some(w => by[i][w])) key.appendChild(h('span', {}, [h('i', {style:`background:${colors[i]}`}), cityName(city)]));
+    return {color:colors[i], dots:true, pts:weeks.map(w => [w, by[i][w]?.[3] ?? null])};
+  });
+  const label = w => prettyDate(new Date(start + w * step).toISOString().slice(0,10));
+  lineChart(chart, {w:780,h:245,m:{l:48,r:44,t:14,b:36},xMin:first-.45,xMax:last+.45,yMin:0,
+    yMax:Math.max(...series.flatMap(s=>s.pts.map(p=>p[1]||0)))*1.12, yFmt:v=>Mv(v,0),
+    xTicks:weeks.filter((w,i)=>i%Math.max(1,Math.ceil(weeks.length/6))===0), xFmt:label,series,
+    crosshair:w=>weeks.includes(w)?{title:label(w),rows:rows.map((city,i)=>{
+      const r=by[i][w]; return {k:cityName(city),c:colors[i],v:r?`${Mv(r[3],1)} · ${nf(r[2])} ${T.ch_ads} · ${prettyDate(r[1])}`:T.ch_empty_short};
+    })}:null});
+}
+
 // ------------------------------------------------------------------ satellites
 function renderSat() {
   const el = $('#satChart');
@@ -946,24 +1124,25 @@ function renderForecast() {
   const off = D.forecast.official[S.fMethod];
   const offPts = [[lc, lastCbi.cbi]].concat(off.map((v, i) => [lc + i + 1, v]));
   const divar = D.major.filter(r => r.city === 'tehran' && r.n >= 1000).map(r => [r.t, r.p]);
-  const divarLive = (D.series.divar_live || []).map(r => [r.t, r.p]);   // scheduled collector snapshots
+  const snapshots = D.series.divar_live || [];
+  const divarLive = snapshots.map(r => [r.x ?? r.t, r.p]);
   const cbiPts = MONTHS.map(m => [m.t, m.cbi]);
   const kilPts = MONTHS.map(m => [m.t, m.kil]);
-  const xMax = lk + H;
+  const lastObservation = divarLive.at(-1)?.[0];
+  const xMax = Math.max(lk + H, Math.ceil(lastObservation || 0));
   const all = [...MONTHS.map(m => m.cbi), ...MONTHS.map(m => m.kil), ...b80.map(p => p[2]), ...off, ...divarLive.map(p => p[1])].filter(v => v);
   const yMin = S.fScale === 'log' ? 3e6 : 0, yMax = Math.max(...all) * 1.06;
-  const todayT = (1405 - 1395) * 12 + 6;   // Mehr 1405
   [[T.cbi, '#2a78d6'], [T.kilid, '#eb6834'], [T.divar, '#1baf7a']].forEach(([l, c]) => key.appendChild(h('span', {}, [h('i', { style: `background:${c}` }), l])));
   key.appendChild(h('span', { style: 'color:#2a78d6' }, [h('i', { cls: 'dash', style: 'background:#2a78d6' }), h('span', { style: 'color:#52514e', text: `${T.official_path} (${D.forecast.labels[S.fMethod][L]})` })]));
   key.appendChild(h('span', {}, [h('i', { cls: 'box', style: 'background:rgba(235,104,52,.18)' }), `${T.forecast}: ${T.band80}`]));
   key.appendChild(h('span', {}, [h('i', { cls: 'box', style: 'background:rgba(235,104,52,.32)' }), T.band50]));
-  const years = []; for (let y = 1395; y <= 1406; y++) years.push((y - 1395) * 12);
+  const years = []; for (let t = 0; t <= xMax; t += 12) years.push(t);
   lineChart(el, {
     w: 1100, h: 400, m: { l: 58, r: 96, t: 16, b: 34 }, xMin: 0, xMax, yLog: S.fScale === 'log', yMin, yMax,
     yTicks: S.fScale === 'log' ? [5e6, 1e7, 2e7, 5e7, 1e8, 2e8, 5e8].filter(v => v >= yMin && v <= yMax) : null,
     yFmt: v => Mv(v, 0), xTicks: years, xFmt: t => yr(1395 + t / 12),
     bands: [{ color: '#eb6834', opacity: .16, pts: b80 }, { color: '#eb6834', opacity: .22, pts: b50 }],
-    vlines: [{ x: todayT, label: FA ? 'امروز' : 'today' }],
+    vlines: lastObservation == null ? [] : [{ x: lastObservation, label: FA ? 'آخرین مشاهده' : 'Last observation' }],
     hl: { x0: (S.year - 1395) * 12, x1: (S.year - 1395) * 12 + 12, label: pLab(S.year) },
     series: [
       { id: 'cbi', color: '#2a78d6', pts: cbiPts },
@@ -979,10 +1158,15 @@ function renderForecast() {
       if (m && m.cbi) rows.push({ k: T.cbi, v: Mv(m.cbi) + ' ' + T.u_m_short, c: '#2a78d6' });
       if (m && m.cbi && cbiYoY(t) != null) rows.push({ k: FA ? 'تغییر سالانه' : 'year on year', v: spct(cbiYoY(t)) });
       if (m && m.tx) rows.push({ k: FA ? 'تعداد معامله' : 'transactions', v: nf(m.tx) });
-      const dv = divar.find(p => p[0] === t) || divarLive.filter(p => p[0] === t).pop(); if (dv) rows.push({ k: T.divar, v: Mv(dv[1]) + ' ' + T.u_m_short, c: '#1baf7a' });
+      const dv = divar.find(p => p[0] === t);
+      if (dv) rows.push({k:T.divar, v:Mv(dv[1]) + ' ' + T.u_m_short, c:'#1baf7a'});
+      for (const r of snapshots.filter(r => r.t === t)) {
+        const observed = new Date(r.date + 'T00:00:00Z').toLocaleDateString(LOC, {day:'numeric', month:'short', timeZone:'UTC'});
+        rows.push({k:T.divar + ' · ' + observed, v:Mv(r.p) + ' ' + T.u_m_short, c:'#1baf7a'});
+      }
       if (m && m.kil) rows.push({ k: T.kilid, v: Mv(m.kil) + ' ' + T.u_m_short, c: '#eb6834' });
       if (t > lc && t <= lc + 24) rows.push({ k: T.official_path, v: Mv(off[t - lc - 1]) + ' ' + T.u_m_short, c: '#2a78d6' });
-      if (t > lk) { const i = t - lk; rows.push({ k: T.forecast, v: Mv(mid(i)) + ' ' + T.u_m_short, c: '#eb6834' }); rows.push({ k: T.band80, v: `${Mv(b80[i][1])}–${Mv(b80[i][2])}` }); }
+      if (t > lk && t <= lk + H) { const i = t - lk; rows.push({ k: T.forecast, v: Mv(mid(i)) + ' ' + T.u_m_short, c: '#eb6834' }); rows.push({ k: T.band80, v: `${Mv(b80[i][1])}–${Mv(b80[i][2])}` }); }
       if (!rows.length) return null;
       return { title: tLabel(t), rows };
     },
@@ -1230,7 +1414,7 @@ function initControls() {
 }
 
 function boot() {
-  initControls(); initValuation(); renderPills(); renderYearBar();
+  initControls(); initCityHistory(); renderCityWeekly(); initValuation(); renderPills(); renderYearBar();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(centerYear);
   addEventListener('resize', centerYear);
   renderKPIs(); renderTehranMap(); renderTehranSide(); renderRank(); renderCatch();

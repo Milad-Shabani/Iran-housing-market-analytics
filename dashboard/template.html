@@ -124,6 +124,32 @@
       </div>
       <div class="card side" id="iSide"></div>
     </div>
+    <div class="card city-history" id="cityHistory" hidden>
+      <div class="city-history-head">
+        <div><h3>{{ch_title}}</h3><p class="note" id="chCoverage"></p></div>
+        <button type="button" id="chCSV">{{ch_download}}</button>
+      </div>
+      <label class="ctl">{{ch_metric}} <select id="chMetric">
+        <option value="sale">{{ch_sale}}</option><option value="rent">{{ch_rent}}</option><option value="deposit">{{ch_deposit}}</option>
+      </select></label><p class="note" id="chDesc"></p>
+      <div class="controls city-filter">
+        <label class="ctl">{{ch_city1}} <select id="chCity1"></select></label>
+        <label class="ctl">{{ch_city2}} <select id="chCity2"></select></label>
+        <label class="ctl">{{ch_city3}} <select id="chCity3"></select></label>
+        <label class="ctl">{{ch_from}} <select id="chFrom"></select></label>
+        <label class="ctl">{{ch_to}} <select id="chTo"></select></label>
+      </div>
+      <p class="note" id="chUnits"></p>
+      <div class="keyrow" id="chKey"></div><div class="chart" id="chChart" role="img" aria-label="{{ch_title}}"></div>
+      <div class="controls"><label class="ctl">{{ch_month}} <select id="chMonth"></select></label></div>
+      <div class="city-table" id="chTable" aria-live="polite"></div>
+      <p class="note ch-source">{{ch_limits}} <a href="https://huggingface.co/datasets/divarofficial/real_estate_ads" target="_blank" rel="noopener">{{ch_source}}</a></p>
+    </div>
+    <div class="card city-history" id="cityWeekly" hidden>
+      <h3>{{cw_title}}</h3><p class="note">{{cw_desc}}</p>
+      <div class="keyrow" id="cwKey"></div><div class="chart" id="cwChart" role="img" aria-label="{{cw_title}}"></div>
+      <div class="city-table" id="cwTable"></div>
+    </div>
     <div class="grid g-2" style="margin-top:14px">
       <div class="card"><h3>{{major_title}}</h3><p class="note">{{major_desc}}</p>
         <div class="controls" style="margin-bottom:4px"><div class="seg" id="mMode"><button data-v="adj" aria-pressed="true">{{adj}}</button><button data-v="raw" aria-pressed="false">{{raw}}</button></div></div>
@@ -140,7 +166,7 @@
       <label class="ctl" style="flex:1;min-width:260px">{{growth_assump}} <input type="range" id="fG" min="0" max="150" step="1" style="flex:1"> <b id="fGOut" class="nowrap"></b></label>
       <div class="chips" id="fPresets"></div>
     </div>
-    <div class="card"><div class="keyrow" id="fKey"></div><div class="chart" id="fChart"></div></div>
+    <div class="card"><div class="keyrow" id="fKey"></div><div class="chart" id="fChart"></div><p class="note">{{divar_coverage_note}}</p></div>
     <div class="grid g-3" style="margin-top:14px">
       <div class="card" id="fOut"></div>
       <div class="card" id="fReal"></div>
