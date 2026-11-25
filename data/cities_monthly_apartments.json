@@ -1,0 +1,30 @@
+{
+  "source": "https://huggingface.co/datasets/divarofficial/real_estate_ads",
+  "source_revision": "e9446ee97b8e6eb9bd62bdfd7548f1bc8973be85",
+  "license": "ODbL-1.0",
+  "input_rows": 1000000,
+  "usable_rows": 295559,
+  "min_listings": 50,
+  "displayed_listings": 274983,
+  "cities": 81,
+  "city_months": 577,
+  "first_month": "2024-03",
+  "last_month": "2025-01",
+  "calendar": "Gregorian",
+  "price_unit": "source units (currency denomination not documented)",
+  "filters": {
+    "category": "residential-sell/apartment-sell",
+    "area_m2": [
+      20,
+      1000
+    ],
+    "source_units_per_m2": [
+      1000000,
+      2000000000
+    ]
+  },
+  "input_sha256": [
+    "b335a736b9a6e8acf73f21b6a634e16671194f21f79aceea842736aa7a3274c1",
+    "0019bfa2627a6832f163e39c8a4389f11edd1ee80391b1f7f08e1b21775db8f5"
+  ]
+}
