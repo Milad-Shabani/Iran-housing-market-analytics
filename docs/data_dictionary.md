@@ -1,5 +1,15 @@
 # Data dictionary
 
+## City sale and rental history
+
+| File | Observations and units |
+|---|---|
+| `data/cities_monthly_apartments.csv` | City, Gregorian month, eligible sale listings, median and 25th/75th percentiles of asking price per m², in source currency units. |
+| `data/cities_monthly_rentals.csv` | City, Gregorian month, eligible paired rental listings. The rent and deposit columns each contain the median and 25th/75th percentiles of the whole-apartment amount in source units. |
+| `data/cities_monthly_*.json` | Source revision, input hashes, coverage, filters, units and period for each archive. |
+| `data/geo/divar_weekly_city_panel.csv` | Fixed Divar city and neighbourhood IDs, slug and viewport bounds, selected from Divar’s public city directories on 26 November 2026. |
+| `data/raw/divar_weekly/city_snapshots.csv` | One accepted observation per city and Saturday-start week, local collection date, usable distinct ads, median and quartiles in toman per m², neighbourhood count, and panel fingerprint. |
+
 ## Raw (`data/raw/`, committed, re-downloadable with `scripts/fetch_sources.py`)
 
 ### `divar_1m/` — aggregates of the Divar official 1M-ad dataset (ODbL)

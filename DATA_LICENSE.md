@@ -5,6 +5,8 @@ The MIT licence in `LICENSE` covers the code. The data keeps the licence of its 
 | Data | Licence / terms | Attribution |
 |---|---|---|
 | `data/raw/divar_1m/*` and everything derived from it | Open Database License (ODbL) 1.0, as published by Divar | Divar real-estate ads dataset, divarofficial/real_estate_ads; aggregates by maminigder/Iran-Real-Estate-Market-Analysis (MIT) |
+| `data/market_archive/*`, `data/cities_monthly_*.csv`, paired manifests | ODbL 1.0 | Direct monthly city, province and Tehran district aggregates of Divar’s [public real-estate release](https://huggingface.co/datasets/divarofficial/real_estate_ads) |
+| `data/raw/divar_weekly/*`, `data/geo/divar_weekly_city_panel.csv`, `data/geo/divar_gilan_cities.csv` | Public map observations subject to the source’s terms | Divar apartment sale/rental maps, city directory and neighbourhood directories |
 | `data/raw/divar_2021/*` | Public research dataset (Kaggle "Tehran (Divar.ir) House Price"), redistributed for non-commercial analysis as in the upstream mirrors | Divar.ir listings; mirror F-Yousefi/House_Price_Prediction |
 | `data/raw/official/cbi_tehran_monthly.csv` | Facts published by the Central Bank of Iran; each row links its source | Central Bank of Iran, Tehran housing market reports |
 | `data/raw/official/kilid_tehran_monthly.csv` | Facts displayed publicly by Kilid.com | kilid.com/house-prices/tehran |

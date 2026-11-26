@@ -30,6 +30,7 @@ def main() -> None:
     template = (DASH / "template.html").read_text(encoding="utf-8")
     css = (DASH / "styles.css").read_text(encoding="utf-8")
     app = (DASH / "app.js").read_text(encoding="utf-8")
+    app = app.replace("// @include market_filters.js", (DASH / "market_filters.js").read_text(encoding="utf-8"))
     font = base64.b64encode((DASH / "fonts" / "vazirmatn-variable.woff2").read_bytes()).decode()
     author_img = "data:image/jpeg;base64," + base64.b64encode((DASH / "author.jpg").read_bytes()).decode()
     font_face = ("@font-face{font-family:'Vazirmatn';src:url(data:font/woff2;base64," + font +

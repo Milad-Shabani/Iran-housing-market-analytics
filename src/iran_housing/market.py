@@ -17,6 +17,10 @@ OUTLIER_RATIO = 0.45   # neighbourhood median below 45% of its district's median
 MIN_LISTINGS = 30      # below this a neighbourhood median is shown but marked thin
 
 
+WEEKLY_CITIES = {"mashhad": "مشهد", "karaj": "کرج", "isfahan": "اصفهان", "shiraz": "شیراز",
+                 "rasht": "رشت", "bandar-anzali": "بندر انزلی", "lahijan": "لاهیجان"}
+
+
 def wquantile(values, weights, q: float) -> float:
     v = np.asarray(values, float)
     w = np.asarray(weights, float)
@@ -162,3 +166,14 @@ def load_divar_snapshots() -> pd.DataFrame:
     if not p.exists():
         return pd.DataFrame(columns=["collected_on", "scope", "listings", "ppm2", "ppm2_p25", "ppm2_p75"])
     return pd.read_csv(p, dtype={"scope": str})
+
+
+def load_comparable_divar_snapshots() -> pd.DataFrame:
+    """Default trend history excludes explicitly flagged runs; the audit CSV is untouched."""
+    snapshots = load_divar_snapshots()
+    quality = RAW / "divar_1405" / "snapshot_quality.csv"
+    if not quality.exists():
+        return snapshots
+    flags = pd.read_csv(quality, dtype=str)
+    excluded = flags.loc[flags.status == "partial", "collected_on"]
+    return snapshots.loc[~snapshots.collected_on.isin(excluded)]

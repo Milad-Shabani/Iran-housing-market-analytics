@@ -20,7 +20,7 @@
       <div>{{brand}}<small>{{brand_sub}}</small></div>
     </div>
     <nav class="nav" aria-label="sections">
-      <a href="#tehran">{{nav_tehran}}</a><a href="#pricing">{{nav_pricing}}</a><a href="#iran">{{nav_iran}}</a><a href="#forecast">{{nav_forecast}}</a><a href="#model">{{nav_model}}</a><a href="#data">{{nav_data}}</a>
+      <a href="#market">{{market_nav}}</a><a href="#tehran">{{nav_tehran}}</a><a href="#pricing">{{nav_pricing}}</a><a href="#iran">{{nav_iran}}</a><a href="#forecast">{{nav_forecast}}</a><a href="#model">{{nav_model}}</a><a href="#data">{{nav_data}}</a>
     </nav>
     <a class="lang" href="{{lang_href}}" hreflang="{{OTHER_LANG}}">{{lang_switch}}</a>
   </div>
@@ -39,17 +39,37 @@
     </div>
   </div>
 
-  <div class="yearbar" role="group" aria-label="{{year_label}}">
-    <div class="yb-row">
-      <span class="yb-title">{{year_label}}</span>
-      <div class="yb-years" id="ybYears"></div>
-      <button class="yb-play" id="ybPlay" type="button" title="{{play}}" aria-label="{{play}}" aria-pressed="false">▶</button>
+  <div class="market-filter card" role="group" aria-label="{{global_filters}}">
+    <div class="filter-fields">
+      <label class="ctl">{{market_label}} <select id="marketKind">
+        <option value="sale">{{filter_sale}}</option><option value="rent">{{filter_rent}}</option><option value="deposit">{{filter_deposit}}</option>
+      </select></label>
+      <label class="ctl">{{global_period}} <select id="marketPeriod"></select></label>
+      <label class="ctl" id="dayField" hidden>{{choose_day}} <input type="date" id="marketDay"></label>
+      <label class="ctl" id="solarDayField" hidden>روز دقیق (شمسی)<input type="text" id="solarDay" dir="ltr" placeholder="۱۴۰۵/۰۹/۰۵" aria-label="تاریخ شمسی، سال ماه روز"></label>
+      <label class="ctl">{{geography}} <select id="marketGeo"><option value="all">{{all_areas}}</option><option value="gilan">{{gilan}}</option></select></label>
+      <button type="button" id="playYears" hidden aria-pressed="false">{{play_years}}</button>
+      <button type="button" id="marketCSV">{{download_filtered}}</button>
     </div>
-    <div class="yb-status" id="ybStatus" aria-live="polite"></div>
+    <p class="note" id="marketStatus" role="status"></p>
   </div>
   <div class="scopebar"><span>{{scope_label}}</span><span class="scope-chip" id="scopeChip"></span><span class="scope-when" id="scopeWhen"></span></div>
   <div class="kpis" id="kpis" aria-live="polite"></div>
 
+  <section class="block" id="market">
+    <div class="sec-head"><div><h2>{{market_nav}}</h2></div></div>
+    <div class="card city-history" id="cityWeekly"><h3>{{weekly_title}}</h3><div id="weeklyBody"></div></div>
+    <div class="card city-history" id="cityHistory">
+      <div class="city-history-head"><h3>{{history_title}}</h3><button type="button" id="chCSV">{{ch_download}}</button></div>
+      <div class="controls city-filter">
+        <label class="ctl">{{ch_city1}} <select id="chCity1"></select></label>
+        <label class="ctl">{{ch_city2}} <select id="chCity2"></select></label>
+        <label class="ctl">{{ch_city3}} <select id="chCity3"></select></label>
+      </div>
+      <div id="historyBody"></div>
+    </div>
+    <div class="card city-history" id="gilanHistory"><h3>{{gilan_history}}</h3><div id="gilanBody"></div></div>
+  </section>
   <section class="block" id="tehran">
     <div class="sec-head"><div><h2><span class="num">1</span>{{s1_title}}</h2><p>{{s1_desc}}</p></div></div>
     <div class="controls">
@@ -140,7 +160,7 @@
       <label class="ctl" style="flex:1;min-width:260px">{{growth_assump}} <input type="range" id="fG" min="0" max="150" step="1" style="flex:1"> <b id="fGOut" class="nowrap"></b></label>
       <div class="chips" id="fPresets"></div>
     </div>
-    <div class="card"><div class="keyrow" id="fKey"></div><div class="chart" id="fChart"></div></div>
+    <div class="card"><div class="keyrow" id="fKey"></div><div class="chart" id="fChart"></div><p class="note">{{divar_coverage_note}}</p></div>
     <div class="grid g-3" style="margin-top:14px">
       <div class="card" id="fOut"></div>
       <div class="card" id="fReal"></div>

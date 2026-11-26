@@ -19,4 +19,9 @@ jobs:
         run: |
           python scripts/run_pipeline.py
           python scripts/build_dashboard.py
-      - run: pytest -q
+      - name: Install browser test driver
+        run: pip install playwright==1.62.0
+      - name: Run data and offline dashboard tests
+        run: |
+          chrome_path=$(command -v google-chrome)
+          HOUSING_TEST_CHROME="$chrome_path" pytest -q

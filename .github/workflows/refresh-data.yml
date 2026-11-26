@@ -1,21 +1,18 @@
 name: Refresh Divar data
 
-# Keeps the dashboard current: collects today's Tehran apartment-for-sale ads from Divar,
-# aggregates them to neighbourhood and district medians, appends a snapshot to the history,
-# rebuilds the dashboard and publishes it.
-#
-# Off by default. To switch it on:
-#   Settings -> Secrets and variables -> Actions -> Variables -> New variable
-#     DATA_REFRESH = on
-# Divar may refuse requests from GitHub's data centres. If the first manual run
-# (Actions -> Refresh Divar data -> Run workflow) fails at "Collect", register a
-# self-hosted runner on a machine inside Iran and add a second variable:
-#     REFRESH_RUNNER = self-hosted
+# Validates Tehran and selected cities independently, then rebuilds and publishes accepted snapshots.
+# Scheduled on the default branch. Set DATA_REFRESH=off to pause scheduled collections.
+# REFRESH_RUNNER can select an existing self-hosted runner with access to Divar.
 
 on:
   schedule:
     - cron: "17 3 * * 5"   # Fridays 03:17 UTC (06:47 Tehran)
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish accepted data to the public site (off for a test run)
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -26,9 +23,9 @@ concurrency:
 
 jobs:
   refresh:
-    if: github.event_name == 'workflow_dispatch' || vars.DATA_REFRESH == 'on'
+    if: github.event_name == 'workflow_dispatch' || vars.DATA_REFRESH != 'off'
     runs-on: ${{ vars.REFRESH_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 90
+    timeout-minutes: 205
     outputs:
       changed: ${{ steps.commit.outputs.changed }}
     steps:
@@ -38,24 +35,43 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements.txt
-      - name: Collect today's Divar ads
-        run: python -u scripts/collect_divar.py collect --max-minutes 50 --max-requests 8000
-      - name: Aggregate to medians and append the snapshot
-        run: python -u scripts/collect_divar.py aggregate
+      - name: Collect and validate Tehran
+        id: tehran
+        continue-on-error: true
+        run: |
+          if ! python -u scripts/collect_divar.py refresh --max-minutes 50 --max-requests 8000; then
+            git restore -- data/raw/divar_1405
+            echo "::warning::Tehran refresh rejected; last accepted data retained"
+            exit 1
+          fi
+      - name: Collect and validate weekly city snapshots
+        id: cities
+        continue-on-error: true
+        run: python -u scripts/collect_city_weekly.py
+      - name: Collect and validate weekly rent and deposit
+        id: rentals
+        continue-on-error: true
+        run: python -u scripts/collect_rentals_weekly.py
+      - name: Verify at least one source refreshed
+        if: steps.tehran.outcome != 'success' && steps.cities.outcome != 'success' && steps.rentals.outcome != 'success'
+        run: |
+          echo "::error::No source passed the refresh checks; previous site retained"
+          exit 1
       - name: Rebuild analysis and dashboard
         run: |
           python scripts/run_pipeline.py
           python scripts/build_dashboard.py
       - run: pytest -q
       - id: commit
+        if: github.ref_name == github.event.repository.default_branch && (github.event_name == 'schedule' || inputs.publish == true)
         name: Commit the refreshed data
         run: |
           git config user.name "Milad Shabani"
           git config user.email "milad.shabani6515@gmail.com"
-          git add data/raw/divar_1405 data/processed site
+          git add data/raw/divar_1405 data/raw/divar_weekly data/processed site
           if git diff --cached --quiet; then echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
           git commit -m "Refresh Divar data ($(date -u +%Y-%m-%d))"
-          git push origin HEAD:main
+          git push origin "HEAD:${GITHUB_REF_NAME}"
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
   publish:

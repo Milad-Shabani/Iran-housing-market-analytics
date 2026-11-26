@@ -129,3 +129,100 @@ def test_dropped_connections_are_retried(monkeypatch):
     monkeypatch.setattr(C.time, "sleep", lambda s: None)
     assert C._http("https://example.invalid", {"x": 1}) == {"posts": []}
     assert calls["n"] == 2
+
+
+@pytest.fixture
+def mock_collect(monkeypatch, tmp_path):
+    cat = tmp_path / "catalog.csv"
+    cat.write_text("slug,divar_id,min_lon,min_lat,max_lon,max_lat\n"
+                   "first,1,51.4,35.7,51.41,35.71\n"
+                   "second,2,51.4,35.7,51.41,35.71\n")
+    monkeypatch.setattr(C, "CATALOG", cat)
+    monkeypatch.setattr(C, "LOCAL", tmp_path / "local")
+    post = {"map_post_card": {"token": "T1"}}
+    return post
+
+
+def test_complete_collection_accepts_empty_neighbourhood_and_exact_budget(monkeypatch, mock_collect):
+    def fetch(*args, district_id, **kw):
+        return {"posts": [mock_collect]} if district_id == "1" else {"posts": []}
+
+    monkeypatch.setattr(C, "request_viewport", fetch)
+    raw = C.collect("tehran", "apartment-sell", 0, 2, False, workers=2, require_complete=True)
+    assert pd.read_csv(raw).token.tolist() == ["T1"]
+
+
+@pytest.mark.parametrize("mode,message", [
+    ("requests", "request cap"), ("time", "time cap"), ("failed", "1 failed"),
+    ("malformed", "1 failed"), ("split", "4 unfinished"), ("empty", "0 ads"),
+])
+def test_strict_collection_rejects_incomplete_attempts(monkeypatch, mock_collect, mode, message):
+    def fetch(*args, district_id, **kw):
+        if mode == "empty":
+            return {"count": 0}
+        if district_id == "1":
+            if mode == "split":
+                return {"count": C.PAGE_LIMIT + 1, "posts": [mock_collect] * C.PAGE_LIMIT}
+            return {"posts": [mock_collect]}
+        if mode == "failed":
+            raise RuntimeError("fixture: retries exhausted")
+        if mode == "malformed":
+            return {}
+        return {"posts": []}
+
+    monkeypatch.setattr(C, "request_viewport", fetch)
+    with pytest.raises(C.IncompleteCollection, match=message):
+        C.collect("tehran", "apartment-sell", 0, 1 if mode in ("requests", "split") else 2,
+                  False, max_minutes=0 if mode == "time" else 45, workers=1, require_complete=True)
+
+
+@pytest.mark.parametrize("districts,prior_ads,accept", [(22, 60, True), (19, 60, False), (22, 1000, False)])
+def test_geographic_and_volume_checks_before_writes(tmp_path, districts, prior_ads, accept):
+    from shapely.geometry import shape
+    from iran_housing.geo import tehran_districts
+
+    out = tmp_path / "out"
+    out.mkdir()
+    # Every publishable file must survive rejection byte-for-byte.
+    names = ("meta.json", "snapshots.csv", "tehran_districts_1405.csv", "tehran_neighbourhoods_1405.csv")
+    old = (json.dumps({"ads_used": prior_ads}), "collected_on,scope,listings,ppm2\n", "old", "old")
+    for name, value in zip(names, old):
+        (out / name).write_text(value)
+    raw = tmp_path / "raw.csv"
+    rows = []
+    for f in list(tehran_districts())[:districts]:
+        d = f["properties"]["district"]
+        pin = shape(f["geometry"]).representative_point()
+        for j in range(3):
+            rows.append({"token": f"{d}-{j}", "lon": pin.x, "lat": pin.y, "price_per_m2_toman": 200e6 + j * 1e6,
+                         "price_toman": 20e9, "size_m2": 100, "parking": 1, "elevator": 1,
+                         "collected_on": "2026-11-27"})
+    pd.DataFrame(rows).to_csv(raw, index=False)
+    if accept:
+        C.aggregate(raw, out_dir=out, require_coverage=True)
+        assert json.loads((out / "meta.json").read_text())["ads_used"] == 66
+    else:
+        with pytest.raises(C.IncompleteCollection, match="coverage check failed"):
+            C.aggregate(raw, out_dir=out, require_coverage=True)
+        assert tuple((out / name).read_text() for name in names) == old
+
+
+def test_refresh_cli_does_not_aggregate_on_incomplete_collection(monkeypatch, capsys):
+    def incomplete(*args, require_complete):
+        assert require_complete
+        raise C.IncompleteCollection("fixture: partial run")
+
+    monkeypatch.setattr(C, "collect", incomplete)
+    monkeypatch.setattr(C, "aggregate", lambda *a, **kw: pytest.fail("must not aggregate"))
+    monkeypatch.setattr(sys, "argv", ["collect_divar.py", "refresh"])
+    assert C.main() == 1
+    assert "last accepted dashboard data kept" in capsys.readouterr().err
+
+
+def test_partial_historical_snapshot_remains_in_audit_only():
+    raw = M.load_divar_snapshots()
+    comparable = M.load_comparable_divar_snapshots()
+    day = "2026-10-02"
+    assert raw.loc[(raw.collected_on == day) & (raw.scope == "tehran"), "listings"].item() == 17175
+    assert not (comparable.collected_on == day).any()
+    pd.testing.assert_frame_equal(comparable, raw.loc[raw.collected_on != day])
