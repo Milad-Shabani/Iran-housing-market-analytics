@@ -1,11 +1,11 @@
 {
  "en": {
-  "ch_title": "Apartment asking prices by city and month",
+  "ch_title": "Compare cities and provinces",
   "ch_download": "Download CSV",
   "ch_desc": "Compare up to three cities. The lines show monthly medians from the same Divar apartment-sale archive, not completed sales.",
-  "ch_city1": "City 1",
-  "ch_city2": "City 2",
-  "ch_city3": "City 3",
+  "ch_city1": "First area",
+  "ch_city2": "Second area",
+  "ch_city3": "Third area",
   "ch_from": "From",
   "ch_to": "To",
   "ch_month": "Table month",
@@ -197,15 +197,21 @@
   "author_site_path": "/en/",
   "year_label": "Data year",
   "play": "Play through the years",
-  "footer_code": "Source code"
+  "footer_code": "Source code",
+  "ob_market": "Market",
+  "ob_source": "Source",
+  "ob_detail_date": "Table date",
+  "ob_sale": "Sale price",
+  "ob_rent": "Rent",
+  "ob_deposit": "Deposit"
  },
  "fa": {
-  "ch_title": "روند ماهانهٔ قیمت پیشنهادی آپارتمان در شهرها",
+  "ch_title": "مقایسهٔ شهرها و استان‌ها",
   "ch_download": "دانلود CSV",
   "ch_desc": "تا سه شهر را کنار هم مقایسه کنید. خط‌ها میانهٔ ماهانهٔ قیمت آگهی فروش آپارتمان در یک آرشیو مشترک دیوار را نشان می‌دهند، نه قیمت معامله.",
-  "ch_city1": "شهر اول",
-  "ch_city2": "شهر دوم",
-  "ch_city3": "شهر سوم",
+  "ch_city1": "محدودهٔ اول",
+  "ch_city2": "محدودهٔ دوم",
+  "ch_city3": "محدودهٔ سوم",
   "ch_from": "از ماه",
   "ch_to": "تا ماه",
   "ch_month": "ماه جدول",
@@ -397,6 +403,12 @@
   "author_site_path": "/",
   "year_label": "سال داده",
   "play": "پخش سال به سال",
-  "footer_code": "کد منبع"
+  "footer_code": "کد منبع",
+  "ob_market": "نوع آگهی",
+  "ob_source": "منبع",
+  "ob_detail_date": "تاریخ جدول",
+  "ob_sale": "قیمت فروش",
+  "ob_rent": "اجاره",
+  "ob_deposit": "رهن"
  }
 }

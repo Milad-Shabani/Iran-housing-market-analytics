@@ -127,7 +127,9 @@ Tehran came to 262 M toman/m², against 94.1 M in 1403 by the same method (×2.8
 
 ### City prices, monthly rents and deposits
 
-The bilingual map dashboard includes the monthly sale archive and supports comparisons of up to three cities. The separate observation files below cover sales, monthly rents and deposits by city, province and collection date. The archive uses Gregorian months and official Tehran indicators use Solar Hijri months.
+One market switch above the map selects **Sale price** (default), **Rent**, or **Deposit**. Changing market keeps the selected year. The maps, indicators, charts and CSV follow the selection. Panels without an eligible observation are disabled. Click the active year again to see all periods.
+
+The comparison under the Iran map supports up to three cities or provinces. Its table includes amounts per apartment and per square metre, median floor area, the share of two-bedroom listings and the number with a reported room count. Deposits include fixed positive amounts on both full-deposit and mixed rent/deposit listings. Weekly surveys record the actual collection day, the archive uses Gregorian months, and official Tehran indicators use Solar Hijri months.
 
 | Archive measure | Cities | Published city-months | Listings in city-months |
 |---|---:|---:|---:|

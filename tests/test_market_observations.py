@@ -77,3 +77,36 @@ def test_rental_card_and_weekly_acceptance_by_amount(tmp_path):
     frame=pd.read_csv(path)
     assert frame.groupby("market").size().to_dict() == {"deposit":2,"rent":1}
     assert frame.neighbourhoods.eq(36).all()
+
+
+def test_supplementary_medians_and_the_known_room_denominator():
+    base = ["residential-sell", "apartment-sell", "rasht", "2024-08-07"]
+    rows = [base + [60, 1_800_000_000, "دو"]] * 35
+    rows += [base + [100, 1_000_000_000, "یک"]] * 20
+    rows += [base + [140, 2_800_000_000, None]] * 30
+    ads = pd.DataFrame(rows, columns=COLUMNS + ["rooms_count"])
+    ads[RENT_COLUMNS] = None
+    sale = dict(market_archives(ads, {"rasht":"IR-01"}))["sale"]
+    for r in sale.itertuples():
+        assert (r.listings, r.median_area_m2, r.rooms_reported, r.two_bedroom_listings) == (85, 100, 55, 35)
+        assert r.median_per_apartment == 1_800_000_000
+        assert r.median_per_m2 == r.median == 20_000_000
+        assert r.median_area_m2 * r.median_per_m2 != r.median_per_apartment
+
+
+def test_weekly_profile_uses_each_amount_and_reads_previous_schema(tmp_path):
+    import collect_city_weekly as weekly
+    cards = [{"size_m2": 60, "rooms": 2, "rent": 18_000_000, "deposit": 300_000_000},
+             {"size_m2": 100, "rooms": None, "rent": 10_000_000, "deposit": 250_000_000},
+             {"size_m2": 140, "rooms": 0, "rent": 28_000_000, "deposit": 140_000_000}]
+    rents = weekly.sample_profile(cards, "rent")
+    assert rents == dict(median_area_m2=100, median_per_apartment=18_000_000,
+                         median_per_m2=200_000, rooms_reported=2, two_bedroom_listings=1)
+    assert weekly.sample_profile(cards, "deposit")["median_per_m2"] == 2_500_000
+    path = tmp_path / "old.csv"
+    old = weekly.HEADER[:-len(weekly.PROFILE_FIELDS)]
+    path.write_text(",".join(old) + "\nrasht,2026-11-20,2026-11-14,350,32,30,40,48,abc\n")
+    previous = weekly.load_rows(path, weekly.HEADER)
+    weekly.save(path, weekly.HEADER, previous)
+    loaded = weekly.load_rows(path, weekly.HEADER)
+    assert loaded[0]["date"] == "2026-11-20" and all(loaded[0][k] == "" for k in weekly.PROFILE_FIELDS)

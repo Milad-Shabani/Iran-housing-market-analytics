@@ -47,7 +47,11 @@
     </div>
     <div class="yb-status" id="ybStatus" aria-live="polite"></div>
   </div>
-  <div class="scopebar"><span>{{scope_label}}</span><span class="scope-chip" id="scopeChip"></span><span class="scope-when" id="scopeWhen"></span></div>
+  <div class="scopebar"><span>{{scope_label}}</span><span class="scope-chip" id="scopeChip"></span><span class="scope-when" id="scopeWhen"></span>
+    <div class="seg" id="obKind" role="group" aria-label="{{ob_market}}">
+      <button type="button" data-v="sale" aria-pressed="true">{{ob_sale}}</button><button type="button" data-v="rent" aria-pressed="false">{{ob_rent}}</button><button type="button" data-v="deposit" aria-pressed="false">{{ob_deposit}}</button>
+    </div>
+  </div>
   <div class="kpis" id="kpis" aria-live="polite"></div>
 
   <section class="block" id="tehran">
@@ -129,7 +133,7 @@
         <div><h3>{{ch_title}}</h3><p class="note" id="chCoverage"></p></div>
         <button type="button" id="chCSV">{{ch_download}}</button>
       </div>
-      <p class="note">{{ch_desc}}</p>
+      <p class="note" id="chDesc"></p>
       <div class="controls city-filter">
         <label class="ctl">{{ch_city1}} <select id="chCity1"></select></label>
         <label class="ctl">{{ch_city2}} <select id="chCity2"></select></label>
@@ -137,11 +141,11 @@
         <label class="ctl">{{ch_from}} <select id="chFrom"></select></label>
         <label class="ctl">{{ch_to}} <select id="chTo"></select></label>
       </div>
-      <p class="note">{{ch_units}}</p>
+      <p class="note" id="chUnits"></p>
       <div class="keyrow" id="chKey"></div><div class="chart" id="chChart" role="img" aria-label="{{ch_title}}"></div>
-      <div class="controls"><label class="ctl">{{ch_month}} <select id="chMonth"></select></label></div>
+      <div class="controls"><label class="ctl">{{ob_detail_date}} <select id="chMonth"></select></label></div>
       <div class="city-table" id="chTable" aria-live="polite"></div>
-      <p class="note ch-source">{{ch_limits}} <a href="https://huggingface.co/datasets/divarofficial/real_estate_ads" target="_blank" rel="noopener">{{ch_source}}</a></p>
+      <p class="note ch-source" id="chLimits"></p>
     </div>
     <div class="grid g-2" style="margin-top:14px">
       <div class="card"><h3>{{major_title}}</h3><p class="note">{{major_desc}}</p>

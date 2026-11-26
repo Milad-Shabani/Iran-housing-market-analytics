@@ -29,6 +29,7 @@ PARQUET_HASHES = {
 COLUMNS = ["cat2_slug", "cat3_slug", "city_slug", "created_at_month", "building_size", "price_value"]
 RENT_COLUMNS = ["rent_mode", "credit_mode", "rent_value", "credit_value"]
 MIN_LISTINGS = 50
+ROOM_COUNTS = {"بدون اتاق": 0, "یک": 1, "دو": 2, "سه": 3, "چهار": 4, "پنج یا بیشتر": 5}
 
 
 def city_apartments(ads: pd.DataFrame, market: str) -> pd.DataFrame:
@@ -85,7 +86,12 @@ def market_archives(ads, province_by_city, districts=None):
             field = "rent" if market == "rent" else "credit"
             amount = pd.to_numeric(rows[field + "_value"], errors="coerce")
             valid = rows[field + "_mode"].eq("مقطوع") & amount.gt(0) & np.isfinite(amount)
-        rows = rows.loc[valid, ["city_slug", "month"]].assign(amount=amount[valid])
+        bedrooms = rows.get("rooms_count", pd.Series(index=rows.index, dtype="string")).map(ROOM_COUNTS)
+        total = pd.to_numeric(rows.price_value, errors="coerce") if market == "sale" else amount
+        rows = rows.loc[valid, ["city_slug", "month", "building_size"]].assign(
+            amount=amount[valid], total=total[valid], per_m2=total[valid] / rows.loc[valid, "building_size"],
+            bedrooms=bedrooms[valid], two_bedrooms=bedrooms[valid].eq(2))
+
         scopes = []
         rows["province"] = rows.city_slug.map(province_by_city)
         rows["district"] = districts if districts is not None else pd.NA
@@ -96,8 +102,14 @@ def market_archives(ads, province_by_city, districts=None):
             counts = group.size().rename("listings")
             table = pd.concat([counts, group.city_slug.nunique().rename("cities"),
                                group.amount.median().rename("median"), group.amount.quantile(.25).rename("p25"),
-                               group.amount.quantile(.75).rename("p75")], axis=1)
+                               group.amount.quantile(.75).rename("p75"),
+                               group.total.median().rename("median_per_apartment"),
+                               group.per_m2.median().rename("median_per_m2"),
+                               group.bedrooms.count().rename("rooms_reported"),
+                               group.two_bedrooms.sum().rename("two_bedroom_listings")], axis=1)
             table = table.loc[table.listings >= MIN_LISTINGS].round().astype("int64").reset_index()
+            sizes = group.building_size.median().rename("median_area_m2").round(1)
+            table = table.merge(sizes, on=["area", "month"], validate="one_to_one")
             table.insert(0, "level", level)
             scopes.append(table)
         yield market, pd.concat(scopes, ignore_index=True)
@@ -119,7 +131,7 @@ def main() -> None:
     hashes = [source_hash(path) for path in args.inputs]
     if len(hashes) != len(set(hashes)) or set(hashes) not in ({CSV_HASH}, PARQUET_HASHES):
         ap.error("expected the official CSV or both distinct Parquet shards from the pinned release")
-    columns = COLUMNS + RENT_COLUMNS + ["location_longitude", "location_latitude"]
+    columns = COLUMNS + RENT_COLUMNS + ["location_longitude", "location_latitude", "rooms_count"]
     if set(hashes) == PARQUET_HASHES:
         ads = pd.concat([pd.read_parquet(p, columns=columns) for p in args.inputs], ignore_index=True)
     else:

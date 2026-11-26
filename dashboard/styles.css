@@ -304,3 +304,11 @@ h3 .when { font-size: 11.5px; margin-inline-start: 4px; }
   .city-filter .ctl { flex-direction: column; align-items: stretch; min-width: 0; }
   .city-filter select { width: 100%; max-width: none; }
 }
+#obKind { margin-inline-start:auto; }
+.block [hidden], #pills[hidden] { display:none !important; }
+.obs-unavailable { color:var(--muted); padding:10px 0; }
+.obs-table { overflow-x:auto; max-width:100%; }
+.obs-table th, .obs-table td { white-space:nowrap; }
+.city-history, .g-map > .card { min-width:0; }
+.survey-marker { stroke:#fff; stroke-width:1; cursor:pointer; }
+.obs-off > :not(h3):not(.obs-unavailable) { display:none !important; }
