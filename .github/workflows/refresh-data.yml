@@ -25,7 +25,7 @@ jobs:
   refresh:
     if: github.event_name == 'workflow_dispatch' || vars.DATA_REFRESH != 'off'
     runs-on: ${{ vars.REFRESH_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 155
+    timeout-minutes: 205
     outputs:
       changed: ${{ steps.commit.outputs.changed }}
     steps:
@@ -48,8 +48,12 @@ jobs:
         id: cities
         continue-on-error: true
         run: python -u scripts/collect_city_weekly.py
+      - name: Collect and validate weekly rent and deposit
+        id: rentals
+        continue-on-error: true
+        run: python -u scripts/collect_rentals_weekly.py
       - name: Verify at least one source refreshed
-        if: steps.tehran.outcome != 'success' && steps.cities.outcome != 'success'
+        if: steps.tehran.outcome != 'success' && steps.cities.outcome != 'success' && steps.rentals.outcome != 'success'
         run: |
           echo "::error::No source passed the refresh checks; previous site retained"
           exit 1

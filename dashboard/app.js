@@ -315,6 +315,7 @@ function renderScopeChip() {
   w.appendChild(h('span', { text: pLab(S.year) }));
 }
 function setScope(sc) {
+  if (!isOverview()) return;
   S.scope = sc;
   renderKPIs(); renderTehranMap(); renderTehranSide(); renderRank(); renderCatch(); renderIranMap(); renderIranSide();
 }
@@ -917,203 +918,6 @@ function renderMajor() {
   });
 }
 
-// ------------------------------------------------------------------ independent city-month archive
-function initCityHistory() {
-  if (!D.city_monthly?.cities?.length) return;
-  const root = $('#cityHistory');
-  root.hidden = false;
-  const dateIndex = m => Number(m.slice(0, 4)) * 12 + Number(m.slice(5)) - 1;
-  const isoMonth = t => String(Math.floor(t / 12)) + '-' + String(t % 12 + 1).padStart(2, '0');
-  const monthLabel = t => iso(FA ? isoMonth(t).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]) : isoMonth(t));
-  const colors = ['#1469b5', '#b84c13', '#087d65'];
-  const selectors = [$('#chCity1'), $('#chCity2'), $('#chCity3')];
-  const from = $('#chFrom'), to = $('#chTo'), month = $('#chMonth'), metric = $('#chMetric');
-  const addOption = (select, value, label) => select.appendChild(h('option', { value, text: label }));
-  const price = v => Mv(v, 1);
-  let by = {}, months = [];
-  const selected = () => selectors.map((s, i) => ({ city: by[s.value], color: colors[i] })).filter(v => v.city);
-
-  function chooseMetric() {
-    const sale = metric.value === 'sale', deposit = metric.value === 'deposit';
-    const archive = sale ? D.city_monthly : D.city_rentals;
-    const meta = archive.meta, lo = dateIndex(meta.first_month), hi = dateIndex(meta.last_month);
-    months = Array.from({length: hi - lo + 1}, (_, i) => lo + i);
-    const cities = archive.cities.slice().sort((a, b) => cityName(a).localeCompare(cityName(b), LOC));
-    by = {};
-    for (const city of cities) {
-      const rows = city.rows.map(r => [r[0], r[1], ...r.slice(deposit ? 5 : 2, deposit ? 8 : 5)]);
-      by[city.s] = {...city, rows, byMonth: Object.fromEntries(rows.map(r => [dateIndex(r[0]), r]))};
-    }
-    selectors.forEach((select, i) => {
-      const previous = select.options.length ? select.value : ['tehran', 'mashhad', 'isfahan'][i];
-      clear(select);
-      if (i) addOption(select, '', T.ch_none);
-      for (const city of cities) addOption(select, city.s, cityName(city));
-      select.value = by[previous] ? previous : (i ? '' : cities[0].s);
-    });
-    const oldFrom = from.value, oldTo = to.value;
-    clear(from); clear(to);
-    for (const t of months) { addOption(from, t, monthLabel(t)); addOption(to, t, monthLabel(t)); }
-    const broad = months.filter(t => cities.filter(c => by[c.s].byMonth[t]).length >= cities.length / 2);
-    from.value = oldFrom ? Math.max(lo, Math.min(+oldFrom, hi)) : (broad[0] ?? lo);
-    to.value = oldTo ? Math.max(+from.value, Math.min(+oldTo, hi)) : (broad.at(-1) ?? hi);
-    $('#chCoverage').textContent = FA
-      ? `${nf(meta.cities)} شهر · ${nf(meta.displayed_listings)} آگهی · ${monthLabel(lo)} تا ${monthLabel(hi)} (میلادی)`
-      : `${nf(meta.cities)} cities · ${nf(meta.displayed_listings)} listings · ${monthLabel(lo)} to ${monthLabel(hi)} (Gregorian)`;
-    $('#chDesc').textContent = sale ? T.ch_desc : T.ch_rental_desc;
-    $('#chUnits').textContent = sale ? T.ch_units : T.ch_rental_units;
-    $('#chChart').setAttribute('aria-label', metric.selectedOptions[0].text);
-    render();
-  }
-
-  function renderTable() {
-    const target = clear($('#chTable'));
-    const t = Number(month.value);
-    const table = h('table', { cls: 't' });
-    const thead = h('thead'), tr = h('tr'), body = h('tbody');
-    [T.ch_city, metric.selectedOptions[0].text, T.ch_iqr, T.ch_ads, T.ch_change].forEach(label => tr.appendChild(h('th', { scope: 'col', text: label })));
-    thead.appendChild(tr);
-    for (const {city} of selected()) {
-      const r = city.byMonth[t], prev = city.byMonth[t - 1];
-      const vals = [cityName(city), r ? price(r[2]) : '–',
-        r ? `${price(r[3])} – ${price(r[4])}` : '–', r ? nf(r[1]) : '–',
-        r && prev ? spct(r[2] / prev[2] - 1, 1) : '–'];
-      body.appendChild(h('tr', {}, vals.map(v => h('td', { text: v }))));
-    }
-    table.append(thead, body);
-    target.appendChild(table);
-  }
-
-  function render() {
-    const a = Number(from.value), b = Number(to.value), chosen = selected();
-    const ts = months.filter(t => t >= a && t <= b);
-    const focus = month.value ? Number(month.value) : b;
-    clear(month);
-    for (const t of ts) addOption(month, t, monthLabel(t));
-    month.value = ts.includes(focus) ? focus : b;
-    const key = clear($('#chKey')), chart = clear($('#chChart'));
-    const series = chosen.map(({city, color}) => {
-      key.appendChild(h('span', {}, [h('i', { style: `background:${color}` }), cityName(city)]));
-      return {color, dots: true, pts: ts.map(t => [t, city.byMonth[t]?.[2] ?? null])};
-    });
-    const values = series.flatMap(s => s.pts.map(p => p[1]).filter(v => v != null));
-    if (!values.length) {
-      chart.appendChild(h('p', { cls: 'note', text: T.ch_empty }));
-    } else {
-      lineChart(chart, {w: 780, h: 270, m: {l: 49, r: 32, t: 14, b: 36},
-        xMin: a - .45, xMax: b + .45, yMin: 0, yMax: Math.max(...values) * 1.12,
-        xTicks: ts.filter((t, i) => i % Math.max(1, Math.ceil(ts.length / 7)) === 0),
-        xFmt: monthLabel, yFmt: v => Mv(v, 0), series,
-        crosshair: t => ts.includes(t) ? {title: monthLabel(t),
-          rows: chosen.map(({city, color}) => {
-            const r = city.byMonth[t];
-            return { k: cityName(city), c: color, v: r ? `${price(r[2])} · ${nf(r[1])} ${T.ch_ads}` : T.ch_empty_short };
-          }),
-        } : null,
-      });
-    }
-    $('#chCSV').disabled = !values.length;
-    renderTable();
-  }
-
-  selectors.forEach(s => {
-    s.addEventListener('change', () => {
-      for (const other of selectors) {
-        if (other === s || !s.value || other.value !== s.value) continue;
-        if (other === selectors[0]) s.value = '';
-        else other.value = '';
-      }
-      render();
-    });
-  });
-  metric.addEventListener('change', chooseMetric);
-  if (!D.city_rentals?.cities?.length) {
-    for (const option of [...metric.options].slice(1)) option.disabled = true;
-  }
-  from.addEventListener('change', () => { if (+from.value > +to.value) to.value = from.value; render(); });
-  to.addEventListener('change', () => { if (+to.value < +from.value) from.value = to.value; render(); });
-  month.addEventListener('change', renderTable);
-  $('#chCSV').addEventListener('click', () => {
-    const suffix = {sale: 'asking_price_per_m2', rent: 'monthly_rent_per_apartment', deposit: 'deposit_per_apartment'}[metric.value];
-    const rows = [['city_slug', 'month_gregorian', 'listings', ...['median','p25','p75'].map(q => q + '_' + suffix + '_source_units')].join(',')];
-    for (const {city} of selected()) {
-      for (const r of city.rows) {
-        const t = dateIndex(r[0]);
-        if (t >= +from.value && t <= +to.value) rows.push([city.s, ...r].join(','));
-      }
-    }
-    const url = URL.createObjectURL(new Blob([rows.join('\r\n') + '\r\n'], {type: 'text/csv;charset=utf-8'}));
-    const a = h('a', {href: url, download: 'divar-city-month-' + metric.value + '.csv'});
-    root.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-  });
-  chooseMetric();
-}
-
-// ------------------------------------------------------------------ weekly snapshots; never joined to the old archive
-function renderCityWeekly() {
-  const block = D.city_weekly;
-  if (!block) return;
-  $('#cityWeekly').hidden = false;
-  const colors = ['#1469b5', '#087d65', '#b84c13', '#945ba0'];
-  const chart = clear($('#cwChart')), key = clear($('#cwKey')), wrap = clear($('#cwTable'));
-  const rows = Object.values(block);
-  const dateFormat = new Intl.DateTimeFormat(LOC, {year:'numeric', month:'short', day:'numeric', timeZone:'UTC'});
-  const prettyDate = s => iso(dateFormat.format(new Date(s + 'T00:00:00Z')));
-  const table = h('table', {cls: 't'}), head = h('tr'), body = h('tbody');
-  for (const label of [T.ch_city, T.cw_date, T.ch_price, T.ch_iqr, T.cw_change, T.ch_ads, T.cw_hoods]) head.appendChild(h('th', {scope: 'col', text:label}));
-  table.append(h('thead', {}, head), body);
-  for (const city of rows) {
-    const last = city.rows.at(-1);
-    const prev = city.rows.at(-2);
-    const adjacent = prev && Date.parse(last[0]) - Date.parse(prev[0]) === 7 * 86400000;
-    const values = [cityName(city), last ? prettyDate(last[1]) : T.cw_wait,
-      last ? Mv(last[3], 1) : '–', last ? iso(Mv(last[4], 1) + ' – ' + Mv(last[5], 1)) : '–',
-      adjacent ? spct(last[3] / prev[3] - 1, 1) : '–', last ? nf(last[2]) : '–', last ? nf(last[6]) : '–'];
-    body.appendChild(h('tr', {}, values.map(v => h('td', {text:v}))));
-  }
-  wrap.appendChild(table);
-  const all = rows.flatMap(c => c.rows);
-  if (!all.length) { chart.appendChild(h('p', {cls:'note', text:T.cw_empty})); return; }
-  if (new Set(all.map(r => r[0])).size === 1) {
-    // A single week supports a cross-city comparison. Show the spread until a trend exists.
-    const ranked = rows.map((city, i) => ({city, point:city.rows.at(-1), color:colors[i]}))
-      .filter(item => item.point).sort((a,b) => b.point[3] - a.point[3]);
-    key.textContent = T.cw_spread;
-    const f = frame(chart, 760, 30 * ranked.length + 45, {l:78, r:24, t:12, b:28});
-    const max = Math.max(...ranked.map(item => item.point[5])) * 1.05;
-    const X = price => f.m.l + price / max * f.iw;
-    for (const tick of niceTicks(0, max)) {
-      svg('line', {x1:X(tick), x2:X(tick), y1:f.m.t, y2:f.h - f.m.b, class:'gridl'}, f.s);
-      text(f.s, X(tick), f.h - 8, Mv(tick, 0), 'axis', {'text-anchor':'middle'});
-    }
-    ranked.forEach(({city, point, color}, i) => {
-      const y = f.m.t + 15 + 30 * i;
-      text(f.s, f.m.l - 10, y + 4, cityName(city), 'clabel', {'text-anchor':'end'});
-      svg('line', {x1:X(point[4]), x2:X(point[5]), y1:y, y2:y, stroke:color,
-        'stroke-opacity':.35, 'stroke-width':8, 'stroke-linecap':'round'}, f.s);
-      svg('circle', {cx:X(point[3]), cy:y, r:5, fill:color}, f.s);
-    });
-    return;
-  }
-  const start = Date.parse(all.map(r => r[0]).sort()[0]);
-  const step = 7*86400000;
-  const idx = s => Math.round((Date.parse(s)-start)/step);
-  const last = Math.max(...all.map(r => idx(r[0]))), first = Math.max(0, last-51);
-  const weeks = Array.from({length:last-first+1}, (_,i) => first+i);
-  const by = rows.map(c => Object.fromEntries(c.rows.map(r => [idx(r[0]), r])));
-  const series = rows.map((city,i) => {
-    if (weeks.some(w => by[i][w])) key.appendChild(h('span', {}, [h('i', {style:`background:${colors[i]}`}), cityName(city)]));
-    return {color:colors[i], dots:true, pts:weeks.map(w => [w, by[i][w]?.[3] ?? null])};
-  });
-  const label = w => prettyDate(new Date(start + w * step).toISOString().slice(0,10));
-  lineChart(chart, {w:780,h:245,m:{l:48,r:44,t:14,b:36},xMin:first-.45,xMax:last+.45,yMin:0,
-    yMax:Math.max(...series.flatMap(s=>s.pts.map(p=>p[1]||0)))*1.12, yFmt:v=>Mv(v,0),
-    xTicks:weeks.filter((w,i)=>i%Math.max(1,Math.ceil(weeks.length/6))===0), xFmt:label,series,
-    crosshair:w=>weeks.includes(w)?{title:T.cw_week + ' ' + label(w),rows:rows.map((city,i)=>{
-      const r=by[i][w]; return {k:cityName(city),c:colors[i],v:r?`${Mv(r[3],1)} · ${nf(r[2])} ${T.ch_ads} · ${prettyDate(r[1])}`:T.ch_empty_short};
-    })}:null});
-}
-
 // ------------------------------------------------------------------ satellites
 function renderSat() {
   const el = $('#satChart');
@@ -1355,57 +1159,12 @@ function renderPills() {
   items.forEach(([v, l]) => box.appendChild(h('span', { cls: 'pill' }, [h('b', { text: iso(v) }), ' ' + l])));
 }
 
-// ================================================================== year bar
-let playT = null;
-function renderYearBar() {
-  const yb = clear($('#ybYears')), y = S.year;
-  const has = v => ({ t: MAP_YEARS.includes(v), i: v === 1403, c: !!lastIn(v, 'cbi'), k: !!lastIn(v, 'kil') });
-  YEARS.forEach(v => {
-    const a = has(v);
-    yb.appendChild(h('button', { cls: 'yb-y' + (v === y ? ' on' : '') + (a.t ? ' map' : ''), 'aria-pressed': v === y ? 'true' : 'false', onclick: () => { stopPlay(); setYear(v); } }, [
-      h('b', { text: yr(v) }), h('span', { cls: 'yb-dots' }, ['t', 'i', 'c', 'k'].filter(k => a[k]).map(k => h('i', { cls: 'yb-dot ' + k })))]));
-  });
-  centerYear();
-  const c = lastIn(y, 'cbi'), k = lastIn(y, 'kil');
-  const item = (cls, name, v) => h('span', { cls: 'yb-s' + (v ? '' : ' off') }, [h('i', { cls: 'yb-dot ' + cls }), name + ': ', h('b', { text: v || (FA ? 'ندارد' : 'none') })]);
-  const st = clear($('#ybStatus'));
-  [item('t', FA ? 'نقشه‌ی تهران' : 'Tehran map', MAP_YEARS.includes(y) ? `${pLab(y)} · ${PER[y].src}` : null),
-   item('i', FA ? 'استان‌ها' : 'Provinces', y === 1403 ? pLab(1403) : null),
-   item('c', FA ? 'بانک مرکزی' : 'Central Bank', c ? tLabel(c.t) : null),
-   item('k', FA ? 'کیلید' : 'Kilid', k ? tLabel(k.t) : null)].forEach(e => st.appendChild(e));
-}
-function centerYear() {   // keep the selected year in view when the bar scrolls (phones)
-  const yb = $('#ybYears'), on = yb.querySelector('.on');
-  if (!on || yb.scrollWidth <= yb.clientWidth) return;
-  const a = on.getBoundingClientRect(), b = yb.getBoundingClientRect();
-  yb.scrollLeft += (a.left + a.width / 2) - (b.left + b.width / 2);
-}
-function stopPlay() { if (playT) { clearInterval(playT); playT = null; } $('#ybPlay').textContent = '▶'; $('#ybPlay').setAttribute('aria-pressed', 'false'); }
-function togglePlay() {
-  if (playT) { stopPlay(); return; }
-  let i = YEARS.indexOf(S.year); if (i >= YEARS.length - 1) i = -1;
-  $('#ybPlay').textContent = '❚❚'; $('#ybPlay').setAttribute('aria-pressed', 'true');
-  const step = () => { i++; if (i >= YEARS.length) { stopPlay(); return; } setYear(YEARS[i]); };
-  step(); playT = setInterval(step, 1400);
-}
-function setYear(y) {
-  if (!YEARS.includes(y)) return;
-  S.year = y; S.legendBin = null; iLegendBin = null;
-  if (S.roll) { S.roll = 0; $('#vRoll').value = 0; }
-  renderYearBar(); renderKPIs(); renderTehranMap(); renderTehranSide(); renderRank(); renderCatch();
-  fillHoodSelect($('#vSearch').value); renderRollChips(); renderValuation(); renderIranMap(); renderIranSide(); renderForecast(); renderYoY();
-}
+// @include market_filters.js
+
+function setYear(year) { chooseGlobalPeriod('y:' + year); }
 
 // ================================================================== wiring
 function initControls() {
-  $('#ybPlay').addEventListener('click', togglePlay);
-  $('#ybYears').addEventListener('keydown', ev => {
-    const back = FA ? 'ArrowRight' : 'ArrowLeft', fwd = FA ? 'ArrowLeft' : 'ArrowRight';
-    if (ev.key !== back && ev.key !== fwd) return;
-    ev.preventDefault(); stopPlay();
-    const i = YEARS.indexOf(S.year) + (ev.key === fwd ? 1 : -1);
-    if (i >= 0 && i < YEARS.length) { setYear(YEARS[i]); $('#ybYears .on').focus(); }
-  });
   const tm = $('#tMetric');
   Object.entries(T_METRICS).forEach(([k, m]) => tm.appendChild(h('option', { value: k, text: m.label })));
   tm.addEventListener('change', ev => { S.tMetric = ev.target.value; S.legendBin = null; renderTehranMap(); renderTehranSide(); });
@@ -1435,12 +1194,12 @@ function initControls() {
 }
 
 function boot() {
-  initControls(); initCityHistory(); renderCityWeekly(); initValuation(); renderPills(); renderYearBar();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(centerYear);
-  addEventListener('resize', centerYear);
+  initControls(); initValuation(); renderPills();
   renderKPIs(); renderTehranMap(); renderTehranSide(); renderRank(); renderCatch();
   renderValuation(); renderIranMap(); renderIranSide(); renderMajor(); renderSat();
   renderForecast(); renderLeaderboard(); renderYoY(); renderModel(); renderData();
+  initMarketFilters();
+
 }
 boot();
 })();

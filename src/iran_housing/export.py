@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import math
-from datetime import date
+from datetime import date, timedelta
 
 import numpy as np
 import pandas as pd
@@ -189,8 +189,8 @@ def city_weekly_block() -> dict:
     groups = {slug: {"en": pretty(slug), "fa": fa, "rows": []} for slug, fa in WEEKLY_CITIES.items()}
     if path.exists():
         rows = pd.read_csv(path, dtype={"date": str, "week": str})
-        if rows.duplicated(["city", "week"]).any():
-            raise ValueError("duplicate city/week in Divar weekly snapshots")
+        if rows.duplicated(["city", "date"]).any():
+            raise ValueError("duplicate city/day in Divar weekly snapshots")
         for r in rows.sort_values("date").itertuples(index=False):
             groups[r.city]["rows"].append([r.week, r.date, int(r.listings), int(r.median_toman_m2),
                                            int(r.p25_toman_m2), int(r.p75_toman_m2), int(r.neighbourhoods)])
@@ -204,6 +204,7 @@ def build_dashboard_data(*, hoods, districts, provinces, cities, satellites, ser
     months = []
     for r in series.itertuples():
         months.append({"t": int(r.t), "y": int(r.jalali_year), "m": int(r.jalali_month), "date": r.date,
+                       "end": (jalali_to_gregorian(*index_to_jalali(int(r.t) + 1)) - timedelta(days=1)).isoformat(),
                        "cbi": _r(r.cbi), "tx": _r(r.transactions), "kil": _r(r.kilid),
                        "q": r.cbi_quality if isinstance(r.cbi_quality, str) else None})
     last_kil = series[series.kilid.notna()].iloc[-1]

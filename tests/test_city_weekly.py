@@ -66,3 +66,12 @@ def test_gather_handles_recorded_empty_response_and_deduplicates(monkeypatch):
     monkeypatch.setattr(W.divar, "request_viewport", lambda *a, **k: {"count": 2})
     with pytest.raises(ValueError, match="posts"):
         W.gather(areas, 1)
+
+
+def test_two_observed_dates_in_one_week_are_preserved(tmp_path):
+    path = tmp_path / "weekly.csv"
+    for day in (date(2026, 11, 26), date(2026, 11, 27), date(2026, 11, 27)):
+        assert W.refresh(["rasht"], path, collect=fixture_ads, day=day) == 0
+    rows = W.load_rows(path, W.HEADER)
+    assert [r["date"] for r in rows] == ["2026-11-26", "2026-11-27"]
+    assert len({r["week"] for r in rows}) == 1

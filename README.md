@@ -16,14 +16,14 @@
 
 | | |
 |---|---|
-| **Year bar** | Pick any year from 1395 to 1405, or press play. Every tile, map, list and chart switches to that year; an indicator with no data for it shows "–" and says why. Each figure carries a badge naming the period it belongs to (c. 1400, 1403, 4 Mehr 1405, Mordad 1403 …), and the bar lists which sources exist for the chosen year. |
+| **Dashboard filters** | Choose sale price per m², monthly rent or deposit, then a day, Gregorian month, Solar Hijri month or Solar Hijri year. The filters apply to every chart, map, table, KPI and listing CSV. A panel without comparable observations for that selection displays a disabled state. |
 | **Tehran map** | 22 municipal districts coloured by 8 indicators (price per m², change from the previous period, typical price, size, build year, elevator and parking share, sample size). Drop to 402 neighbourhoods, zoom and pan, or enter a budget and see which neighbourhoods fit. |
 | **Price a home** | Pick a neighbourhood, set size, bedrooms, parking, storage and elevator. The estimate comes with an 80% range, a step-by-step breakdown, where it sits in the neighbourhood's price distribution, and what the same money buys in other districts. |
 | **Iran map** | 31 provinces and 349 cities, from 514,282 real listings. Click a province to see its cities. |
 | **Trend & forecast** | The Central Bank's monthly Tehran series (1395–1403), Kilid's listing indicator (1404–1405), and a 12-month outlook whose method and band widths come from a rolling-origin backtest. Change the growth assumption and watch the fan move. |
 | **Model** | Cross-validated accuracy, what each feature is worth, predicted vs listed price. |
 
-Every tile and chart follows the selection: click District 3 and the KPIs, the side panel, the ranking and the scatter all switch to District 3, for the year on the year bar.
+In the all-period sale overview, selecting District 3 links its map, KPIs, ranking and detailed comparisons. Date-specific maps use the last observation within the chosen period and show its date.
 
 <table>
 <tr><td width="50%"><img src="docs/assets/neighbourhoods_en.png" alt="District 1 at neighbourhood level"><br><sub>Neighbourhood level: each dot is a neighbourhood at Divar's median listing location, sized by listings.</sub></td>
@@ -120,30 +120,26 @@ which returns up to 200 ads per map rectangle with size, rooms, building age, pa
 elevator flags, coordinates and a rounded price; rectangles with more ads are split until every
 ad is returned, and each ad keeps the neighbourhood Divar assigns it. Individual
 ads stay in `data/local/` (git-ignored). Only neighbourhood and district medians are written to
-`data/raw/divar_1405/`. With them the dashboard gains a *Price per m² (1405)* indicator, a
-1405 stop on the year bar (the default view); without them the bar ends at 1403's data.
+`data/raw/divar_1405/`. Each accepted day appears in the global date filter. The default is the latest observed collection day across the three measures.
 The first full collection (4 Mehr 1405, 26 Sep 2026) returned 172,178 ads, 170,356 of which
 passed the filters; Divar's neighbourhood tag agreed with the ad's location for 99.9% of them.
 Tehran came to 262 M toman/m², against 94.1 M in 1403 by the same method (×2.8).
 
 ### City prices, monthly rents and deposits
 
-In the Iran section, compare up to three cities by monthly sale price per m², monthly rent per
-apartment or upfront deposit per apartment. The selected metric, cities and date range also
-apply to the downloadable CSV. The table includes quartiles, the sample count and change from
-the immediately preceding calendar month.
+The top filter controls both languages, the market observations, Tehran and Iran maps, pricing, forecasting and model panels. Select **All periods** to see undated training diagnostics and multi-period selling-price comparisons. The Persian version accepts both Solar Hijri and Gregorian days. A day matches exact observations only. A month or year includes observations fully contained in that interval. The source archive uses Gregorian months and official Tehran indicators use Solar Hijri months.
 
-| Divar apartment archive | Cities | Displayed city-months | Listed apartments | Coverage |
-|---|---:|---:|---:|---|
-| Sale price per m² | 81 | 577 | 274,983 | March 2024 to January 2025 |
-| Monthly rent and upfront deposit | 66 | 418 | 142,524 | April 2024 to January 2025 |
+| Archive measure | Cities | Published city-months | Listings in city-months |
+|---|---:|---:|---:|
+| Sale price per m² | 81 | 577 | 274,983 |
+| Monthly rent per apartment | 67 | 421 | 143,125 |
+| Deposit per apartment | 74 | 507 | 190,917 |
 
-Both rental amounts come from the same ads quoting a positive fixed rent and deposit. Each
-city-month needs at least 50 eligible apartments of 20–1,000 m². The archive uses Gregorian
-months and does not specify its currency denomination. The two manifests in `data/cities_monthly_*.json`
-give the source revision, filters and file hashes. To reproduce the CSVs, pass the original CSV
-or both complete Parquet shards to `python scripts/build_city_monthly.py` (install PyArrow for
-Parquet input). [Divar public archive, ODbL](https://huggingface.co/datasets/divarofficial/real_estate_ads)
+Each metric has its own eligible sample. The rental measures require a fixed, positive amount for that field. A full-deposit listing with no monthly payment can therefore contribute to the deposit series. A listing can appear in both series. Each area-month needs 50 eligible apartments measuring 20–1,000 m². Archive amounts retain the source units because the release does not document the currency denomination. Weekly amounts are in toman.
+
+Province medians pool individual listings in mapped cities, including cities with fewer than 50 eligible listings. Gilan uses the [56-city Divar directory](data/geo/divar_gilan_cities.csv) under province ID 889. Each province-month reports the number of contributing cities. Tehran district-months use reported listing coordinates inside a single municipal district. City, province and district rows overlap and must be analysed at their own geographical level.
+
+Download [sale](data/processed/market_sale.csv), [rent](data/processed/market_rent.csv) or [deposit](data/processed/market_deposit.csv) observations, or use the dashboard CSV for your current period and geography. Each row carries the measure, source, area level, dates, units, sample size and quartiles. `data/market_archive/` contains reproducible inputs. The two original `cities_monthly_*.json` manifests pin the source revision and hashes. Pass the official CSV or both complete Parquet shards to `python scripts/build_city_monthly.py` (Parquet needs PyArrow). [Divar public archive and ODbL licence](https://huggingface.co/datasets/divarofficial/real_estate_ads)
 
 ### Weekly refresh
 
@@ -157,19 +153,9 @@ supports a test run and an explicit publish option on the default branch.
   districts and at least half the previous usable listing count. Incomplete attempts keep
   the last accepted maps and prices. The partial 2 October 2026 observation remains in
   [raw history](data/raw/divar_1405/snapshots.csv) with its [coverage flag](data/raw/divar_1405/snapshot_quality.csv).
-* **Mashhad, Karaj, Isfahan and Shiraz.** The collector surveys 48 fixed neighbourhoods per
-  city. The panel draws eight longitude strata from each of six latitude bands in Divar’s
-  neighbourhood catalogue. It reads up to 200 apartment-sale cards per fixed rectangle, removes
-  duplicate listing IDs, then computes the median and quartiles across usable cards. These are
-  panel estimates. Active ads and densely listed areas can have different sampling rates.
-  Each city must complete all 48 requests, retain the same panel, and have at least 100 usable
-  ads and half its previous accepted count. Reruns replace the same Saturday–Friday week.
-  The public history stores only city aggregates and each city advances independently.
+* **Weekly city panels.** Mashhad, Karaj, Isfahan, Shiraz, Rasht and Bandar Anzali each have 48 fixed neighbourhoods. Lahijan has 36. The panels survey sales, rents and deposits. Tehran additionally has a 48-neighbourhood rental panel. Divar returns up to 200 map cards per neighbourhood. The collector deduplicates listings inside each city, checks the panel signature and requires at least half the preceding accepted sample, with a minimum of 100 sale prices or 50 values per rental measure. Each measure can pass independently. Different observation days in the same Saturday–Friday week are preserved. Retrying the same day replaces that day’s row. Weekly Gilan coverage is limited to the three named city panels.
 
-To refresh locally, run `python scripts/collect_divar.py refresh` for Tehran and
-`python scripts/collect_city_weekly.py` for the four city panels, then rebuild the pipeline
-and dashboard. A new candidate panel can be inspected with
-`python scripts/collect_city_weekly.py --build-panel /tmp/panel.csv`.
+To refresh locally, run `python scripts/collect_divar.py refresh`, `python scripts/collect_city_weekly.py` and `python scripts/collect_rentals_weekly.py`, then rebuild the pipeline and dashboard. Inspect a candidate city panel with `python scripts/collect_city_weekly.py --build-panel /tmp/panel.csv`.
 
 ### About the earlier draft's 1405 figures
 

@@ -20,6 +20,7 @@ from iran_housing import listings as L  # noqa: E402
 from iran_housing import market as M  # noqa: E402
 from iran_housing import timeseries as T  # noqa: E402
 from iran_housing import valuation as V  # noqa: E402
+from iran_housing.observations import dashboard_observations, market_tables
 from iran_housing.export import build_dashboard_data  # noqa: E402
 from iran_housing.paths import PROCESSED  # noqa: E402
 
@@ -110,6 +111,10 @@ def main() -> None:
         leaderboard=lb, bands=bands, official_paths=official_paths, last_cbi=last_cbi,
         g_long=g_long, g_kilid=g_kilid_12m, cv=cv, model=model, interval=interval, oof=oof,
         report=report)
+    tables = market_tables()
+    for market, table in tables.items():
+        table.to_csv(PROCESSED / f"market_{market}.csv", index=False)
+    data["observations"] = dashboard_observations(tables)
     (PROCESSED / "dashboard_data.json").write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")),
                                                    encoding="utf-8")
     (PROCESSED / "run_report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False, default=float),

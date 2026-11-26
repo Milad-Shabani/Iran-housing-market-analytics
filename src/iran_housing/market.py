@@ -17,7 +17,8 @@ OUTLIER_RATIO = 0.45   # neighbourhood median below 45% of its district's median
 MIN_LISTINGS = 30      # below this a neighbourhood median is shown but marked thin
 
 
-WEEKLY_CITIES = {"mashhad": "مشهد", "karaj": "کرج", "isfahan": "اصفهان", "shiraz": "شیراز"}
+WEEKLY_CITIES = {"mashhad": "مشهد", "karaj": "کرج", "isfahan": "اصفهان", "shiraz": "شیراز",
+                 "rasht": "رشت", "bandar-anzali": "بندر انزلی", "lahijan": "لاهیجان"}
 
 
 def wquantile(values, weights, q: float) -> float:

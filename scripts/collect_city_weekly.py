@@ -1,7 +1,7 @@
 """Collect a fixed, geographically spread panel of Divar apartment-sale map viewports.
 
 The pinned panel keeps the surveyed neighbourhoods and rectangles comparable over time.
-Each neighbourhood contributes up to 200 map cards. Only aggregate city-week rows are saved.
+Each neighbourhood contributes up to 200 map cards. City aggregates retain the actual collection date and the Saturday-based week.
 """
 from __future__ import annotations
 
@@ -31,7 +31,11 @@ HEADER = ["city", "date", "week", "listings", "median_toman_m2", "p25_toman_m2",
 BANDS, PER_BAND = 6, 8
 
 
-def select_panel(raw):
+def panel_size(city):
+    return 36 if city == "lahijan" else BANDS * PER_BAND
+
+
+def select_panel(raw, count=BANDS * PER_BAND):
     """Equal-count latitude bands, with one midpoint from each longitude stratum."""
     valid = []
     for r in raw:
@@ -40,15 +44,16 @@ def select_panel(raw):
         west, south, east, north = map(float, r["bbox"])
         if 42 <= west < east <= 65 and 24 <= south < north <= 41:
             valid.append((int(r["id"]), str(r["slug"]), west, south, east, north))
-    if (len(valid) < BANDS * PER_BAND or len(valid) < .9 * len(raw)
+    if (len(valid) < count or len(valid) < .9 * len(raw)
             or len({r[0] for r in valid}) != len(valid)):
         raise divar.IncompleteCollection("inadequate city neighbourhood directory")
     valid.sort(key=lambda r: (r[3] + r[5], r[0]))
     chosen = []
+    per_band = count // BANDS
     for i in range(BANDS):
         band = valid[i * len(valid) // BANDS:(i + 1) * len(valid) // BANDS]
         band.sort(key=lambda r: (r[2] + r[4], r[0]))
-        chosen.extend(band[(2 * j + 1) * len(band) // (2 * PER_BAND)] for j in range(PER_BAND))
+        chosen.extend(band[(2 * j + 1) * len(band) // (2 * per_band)] for j in range(per_band))
     return chosen
 
 
@@ -68,7 +73,7 @@ def build_panel(path):
     for slug, name in CITIES.items():
         city, = [c for c in cities if c["slug"] == slug and c["name"] == name]
         directory = divar._http(divar.CATALOG_URL.format(city_id=city["id"]), None)["districts"]
-        for area in select_panel(directory):
+        for area in select_panel(directory, panel_size(slug)):
             rows.append(dict(zip(PANEL_FIELDS, [slug, city["id"], *area])))
     save(path, PANEL_FIELDS, rows)
 
@@ -81,19 +86,19 @@ def load_rows(path, fields):
         return list(reader)
 
 
-def gather(districts, max_minutes):
+def gather(districts, max_minutes, *, category="apartment-sell", parser=divar.parse_post):
     deadline = time.monotonic() + max_minutes * 60
 
     def fetch(area):
         if time.monotonic() >= deadline:
             raise divar.IncompleteCollection("panel time budget reached")
         bbox = tuple(float(area[k]) for k in PANEL_FIELDS[4:])
-        response = divar.request_viewport(area["city_id"], "apartment-sell", bbox, divar.zoom_for(bbox),
+        response = divar.request_viewport(area["city_id"], category, bbox, divar.zoom_for(bbox),
                                           district_id=area["district_id"])
         posts, _ = divar.map_posts(response)
         if len(posts) > divar.PAGE_LIMIT:
             raise divar.IncompleteCollection("map card limit changed")
-        parsed = [divar.parse_post(p) for p in posts]
+        parsed = [parser(p) for p in posts]
         if any(p is None for p in parsed):
             raise divar.IncompleteCollection("unrecognised map card")
         time.sleep(.5)
@@ -104,19 +109,28 @@ def gather(districts, max_minutes):
         for rows in pool.map(fetch, districts):
             for row in rows:
                 token = row["token"]
-                if token not in seen or seen[token].get("price_per_m2_toman") is None:
+                if token not in seen:
                     seen[token] = row
+                else:
+                    for field, value in row.items():
+                        if seen[token].get(field) is None and value is not None:
+                            seen[token][field] = value
     return list(seen.values())
 
 
-def summarize(city, day, rows, districts, previous):
-    if (len(districts) != BANDS * PER_BAND or len({r["district_id"] for r in districts}) != len(districts)
+def panel_signature(city, districts, previous):
+    if (len(districts) != panel_size(city) or len({r["district_id"] for r in districts}) != len(districts)
             or len({r["city_id"] for r in districts}) != 1):
         raise divar.IncompleteCollection("incomplete or duplicate panel areas")
     signature = "\n".join(sorted(",".join(str(r[k]) for k in PANEL_FIELDS) for r in districts))
     panel_id = hashlib.sha256(signature.encode()).hexdigest()[:16]
     if previous and previous["panel_id"] != panel_id:
         raise divar.IncompleteCollection("panel differs from the accepted series")
+    return panel_id
+
+
+def summarize(city, day, rows, districts, previous):
+    panel_id = panel_signature(city, districts, previous)
     size = pd.Series([r.get("size_m2") for r in rows], dtype="float64")
     ppm = pd.Series([r.get("price_per_m2_toman") for r in rows], dtype="float64")
     valid = ppm[size.between(20, 1000) & ppm.between(5e6, 2e9)]
@@ -132,8 +146,8 @@ def summarize(city, day, rows, districts, previous):
 def refresh(cities, out, max_minutes=10, *, panel=PANEL, collect=gather, day=None):
     day = datetime.now(ZoneInfo("Asia/Tehran")).date() if day is None else day
     history = load_rows(out, HEADER) if out.exists() else []
-    if len({(r["city"], r["week"]) for r in history}) != len(history):
-        raise ValueError("duplicate city/week in input history")
+    if len({(r["city"], r["date"]) for r in history}) != len(history):
+        raise ValueError("duplicate city/day in input history")
     panels = defaultdict(list)
     for area in load_rows(panel, PANEL_FIELDS):
         panels[area["city"]].append(area)
@@ -148,7 +162,7 @@ def refresh(cities, out, max_minutes=10, *, panel=PANEL, collect=gather, day=Non
         except (RuntimeError, KeyError, TypeError, ValueError) as exc:
             print(f"REJECTED {city}: {exc}", flush=True)
             continue
-        history = [r for r in history if (r["city"], r["week"]) != (city, accepted["week"])] + [accepted]
+        history = [r for r in history if (r["city"], r["date"]) != (city, accepted["date"])] + [accepted]
         save(out, HEADER, sorted(history, key=lambda r: (r["date"], r["city"])))
         success += 1
         print(f"ACCEPTED {city}: {accepted['listings']:,} usable listings across {len(areas)} surveyed areas", flush=True)
