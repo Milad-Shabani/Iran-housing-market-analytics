@@ -80,7 +80,6 @@ const G_LONG = Math.expm1(12 * D.forecast.g_long), G_KIL = Math.expm1(12 * D.for
 // Every figure belongs to one period. rec(o, y) returns an object's figures for year y (same
 // short keys in every period) or null, so an indicator without data for that year shows "–".
 const LIVE = D.meta.divar_1405 || null;
-const liveYear = LIVE?.collected_on_jalali?.[0] ?? 1405;
 const liveDate = () => {
   if (!LIVE) return '';
   const j = LIVE.collected_on_jalali;
@@ -88,21 +87,20 @@ const liveDate = () => {
   return FA ? `${nf(j[2])} ${MFA[j[1] - 1]} ${yr(j[0])}` : `${j[2]} ${MEN[j[1] - 1]} ${j[0]}`;
 };
 const liveGreg = () => LIVE ? new Date(LIVE.collected_on + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '';
-const MAP_YEARS = LIVE ? [1400, 1403, liveYear] : [1400, 1403];
-const lastYear = Math.max(lastKil.y, LIVE ? liveYear : 0);
-const YEARS = Array.from({ length: lastYear - 1395 + 1 }, (_, i) => 1395 + i);
+const MAP_YEARS = LIVE ? [1400, 1403, 1405] : [1400, 1403];
+const YEARS = Array.from({ length: 11 }, (_, i) => 1395 + i);
 const PER = {
   1400: { lab: FA ? 'حدود ۱۴۰۰' : 'c. 1400', src: FA ? `نمونه‌ی ${nf(D.meta.listings_2021)} آگهی دیوار` : `Divar sample, ${nf(D.meta.listings_2021)} ads` },
   1403: { lab: FA ? '۱۴۰۳' : '1403', src: FA ? `${nf(D.meta.tehran_listings_located)} آگهی دیوار` : `${nf(D.meta.tehran_listings_located)} Divar ads` },
 };
-if (LIVE) PER[liveYear] = { lab: liveDate(), src: FA ? `${nf(LIVE.ads_used)} آگهی دیوار` : `${nf(LIVE.ads_used)} Divar ads, collected ${liveGreg()}` };
+if (LIVE) PER[1405] = { lab: liveDate(), src: FA ? `${nf(LIVE.ads_used)} آگهی دیوار` : `${nf(LIVE.ads_used)} Divar ads, collected ${liveGreg()}` };
 const pLab = y => PER[y] ? PER[y].lab : yr(y);
 const span2 = (a, b) => FA ? `${pLab(a)} تا ${pLab(b)}` : `${pLab(a)} → ${pLab(b)}`;
 const prevYear = y => { const i = MAP_YEARS.indexOf(y); return i > 0 ? MAP_YEARS[i - 1] : null; };
 function rec(o, y) {
   if (!o) return null;
   if (y === 1403) return o.p != null ? o : null;
-  if (LIVE && y === liveYear) return o.y5 || null;
+  if (y === 1405) return o.y5 || null;
   if (y === 1400) return o.y0 && o.y0.p != null ? o.y0 : null;
   return null;
 }
@@ -117,9 +115,9 @@ function wq(pairs, q = 0.5) {   // listing-weighted quantile, same interpolation
   return v[v.length - 1][0];
 }
 const TMED = { 1400: D.meta.tehran_median_2021, 1403: TEHRAN_MED };
-if (LIVE) TMED[liveYear] = LIVE.tehran_median_ppm2;
+if (LIVE) TMED[1405] = LIVE.tehran_median_ppm2;
 const TYP = {};   // typical listing price and size, listing-weighted over neighbourhoods
-MAP_YEARS.filter(y => y >= 1403).forEach(y => { const hs = HOODS.filter(x => rec(x, y)); if (hs.length) TYP[y] = { pm: wq(hs.map(x => [val(x, 'pm', y), val(x, 'n', y)])), sz: wq(hs.map(x => [val(x, 'sz', y), val(x, 'n', y)])) }; });
+[1403, 1405].forEach(y => { const hs = HOODS.filter(x => rec(x, y)); if (hs.length) TYP[y] = { pm: wq(hs.map(x => [val(x, 'pm', y), val(x, 'n', y)])), sz: wq(hs.map(x => [val(x, 'sz', y), val(x, 'n', y)])) }; });
 const lastIn = (y, k) => MONTHS.filter(m => m.y === y && m[k] != null).pop() || null;
 const noData = y => FA ? `برای ${pLab(y)} داده نداریم` : `no data for ${pLab(y)}`;
 const rankOf = (d, y) => { const v = val(d, 'p', y); return v == null ? null : DIST.filter(o => (val(o, 'p', y) || 0) > v).length + 1; };
@@ -218,7 +216,7 @@ function zoomable(svgEl, g, box, onZoom) {
 
 // ------------------------------------------------------------------ shared state
 const S = {
-  scope: { type: 'tehran' }, year: LIVE ? liveYear : 1403,
+  scope: { type: 'tehran' }, year: LIVE ? 1405 : 1403,
   tMetric: 'p', tLayer: 'd', budgetOn: false, budget: 8e9, bSize: 75, legendBin: null,
   iMetric: 'p', iCities: false,
   hood: 'saadat-abad', area: 90, rooms: 2, parking: 1, storage: 1, elevator: 1, roll: 0,
@@ -315,7 +313,6 @@ function renderScopeChip() {
   w.appendChild(h('span', { text: pLab(S.year) }));
 }
 function setScope(sc) {
-  if (!isOverview()) return;
   S.scope = sc;
   renderKPIs(); renderTehranMap(); renderTehranSide(); renderRank(); renderCatch(); renderIranMap(); renderIranSide();
 }
@@ -358,7 +355,7 @@ DIST.forEach(d => {
   p.addEventListener('keydown', ev => { if (ev.key === 'Enter') setScope({ type: 'district', d: d.d }); });
   text(tLabG, d.lx, d.ly, nf(d.d), 'dlabel');
 });
-HOODS.slice().sort((a, b) => Math.max(b.n, val(b, 'n', liveYear) || 0) - Math.max(a.n, val(a, 'n', liveYear) || 0)).forEach(x => {
+HOODS.slice().sort((a, b) => Math.max(b.n, val(b, 'n', 1405) || 0) - Math.max(a.n, val(a, 'n', 1405) || 0)).forEach(x => {
   const c = svg('circle', { cx: x.x, cy: x.y, r: 3, 'data-r': 3, class: 'hood', 'data-s': x.s }, tHoodG);
   c.addEventListener('pointermove', ev => hoodTip(ev, x));
   c.addEventListener('pointerleave', hideTip);
@@ -586,7 +583,7 @@ function renderCatch() {
   const title = $('#catchTitle'), desc = $('#catchDesc');
   if (ds.length < 5) {
     title.textContent = FA ? 'کدام منطقه‌ها سریع‌تر گران شدند؟' : 'Which districts rose faster?';
-    desc.textContent = FA ? 'برای مقایسه با دورهٔ قبل، یکی از دوره‌های زیر را انتخاب کنید.' : 'Select a period below to compare with the previous observation.';
+    desc.textContent = FA ? 'این نمودار دو دوره‌ی پشت سر هم لازم دارد. در نوار زمان ۱۴۰۳ یا ۱۴۰۵ را انتخاب کنید.' : 'This chart needs two consecutive periods. Pick 1403 or the latest year on the year bar.';
     clear(el).appendChild(h('div', { cls: 'chips' }, MAP_YEARS.filter(prevYear).map(v => h('button', { cls: 'chip', text: pLab(v), onclick: () => setYear(v) }))));
     return;
   }
@@ -918,6 +915,114 @@ function renderMajor() {
   });
 }
 
+// ------------------------------------------------------------------ independent city-month archive
+function initCityHistory() {
+  const data = D.city_monthly;
+  if (!data?.cities?.length) return;
+  const root = $('#cityHistory');
+  root.hidden = false;
+  const dateIndex = m => Number(m.slice(0, 4)) * 12 + Number(m.slice(5)) - 1;
+  const isoMonth = t => String(Math.floor(t / 12)) + '-' + String(t % 12 + 1).padStart(2, '0');
+  const monthLabel = t => iso(FA ? isoMonth(t).replace(/[0-9]/g, d => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]) : isoMonth(t));
+  const lo = dateIndex(data.meta.first_month), hi = dateIndex(data.meta.last_month);
+  const months = Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
+  const colors = ['#1469b5', '#b84c13', '#087d65'];
+  const selectors = [$('#chCity1'), $('#chCity2'), $('#chCity3')];
+  const from = $('#chFrom'), to = $('#chTo'), month = $('#chMonth');
+  const cities = data.cities.slice().sort((a, b) => cityName(a).localeCompare(cityName(b), LOC));
+  const by = Object.fromEntries(cities.map(c => [c.s, { ...c, byMonth: Object.fromEntries(c.rows.map(r => [dateIndex(r[0]), r])) }]));
+  const addOption = (select, value, label) => select.appendChild(h('option', { value, text: label }));
+  const selected = () => selectors.map((s, i) => ({ city: by[s.value], color: colors[i] })).filter(v => v.city);
+  const price = v => Mv(v, 1);
+  $('#chCoverage').textContent = FA
+    ? `${nf(data.meta.cities)} شهر · ${nf(data.meta.city_months)} ترکیب شهر و ماه · ${monthLabel(lo)} تا ${monthLabel(hi)} (میلادی)`
+    : `${nf(data.meta.cities)} cities · ${nf(data.meta.city_months)} city-months · ${monthLabel(lo)} to ${monthLabel(hi)} (Gregorian)`;
+
+  function renderTable() {
+    const target = clear($('#chTable'));
+    const t = Number(month.value);
+    const table = h('table', { cls: 't' });
+    const thead = h('thead'), tr = h('tr'), body = h('tbody');
+    [T.ch_city, T.ch_price, T.ch_iqr, T.ch_ads, T.ch_change].forEach(label => tr.appendChild(h('th', { scope: 'col', text: label })));
+    thead.appendChild(tr);
+    for (const {city} of selected()) {
+      const r = city.byMonth[t], prev = city.byMonth[t - 1];
+      const vals = [cityName(city), r ? price(r[2]) : '–',
+        r ? `${price(r[3])} – ${price(r[4])}` : '–', r ? nf(r[1]) : '–',
+        r && prev ? spct(r[2] / prev[2] - 1, 1) : '–'];
+      body.appendChild(h('tr', {}, vals.map(v => h('td', { text: v }))));
+    }
+    table.append(thead, body);
+    target.appendChild(table);
+  }
+
+  function render() {
+    const a = Number(from.value), b = Number(to.value), chosen = selected();
+    const ts = months.filter(t => t >= a && t <= b);
+    const focus = month.value ? Number(month.value) : b;
+    clear(month);
+    for (const t of ts) addOption(month, t, monthLabel(t));
+    month.value = ts.includes(focus) ? focus : b;
+    const key = clear($('#chKey')), chart = clear($('#chChart'));
+    const series = chosen.map(({city, color}) => {
+      key.appendChild(h('span', {}, [h('i', { style: `background:${color}` }), cityName(city)]));
+      return {color, dots: true, pts: ts.map(t => [t, city.byMonth[t]?.[2] ?? null])};
+    });
+    const values = series.flatMap(s => s.pts.map(p => p[1]).filter(v => v != null));
+    if (!values.length) {
+      chart.appendChild(h('p', { cls: 'note', text: T.ch_empty }));
+    } else {
+      lineChart(chart, {w: 780, h: 270, m: {l: 49, r: 32, t: 14, b: 36},
+        xMin: a - .45, xMax: b + .45, yMin: 0, yMax: Math.max(...values) * 1.12,
+        xTicks: ts.filter((t, i) => i % Math.max(1, Math.ceil(ts.length / 7)) === 0),
+        xFmt: monthLabel, yFmt: v => Mv(v, 0), series,
+        crosshair: t => ts.includes(t) ? {title: monthLabel(t),
+          rows: chosen.map(({city, color}) => {
+            const r = city.byMonth[t];
+            return { k: cityName(city), c: color, v: r ? `${price(r[2])} · ${nf(r[1])} ${T.ch_ads}` : T.ch_empty_short };
+          }),
+        } : null,
+      });
+    }
+    $('#chCSV').disabled = !values.length;
+    renderTable();
+  }
+
+  selectors.forEach((s, i) => {
+    if (i) addOption(s, '', T.ch_none);
+    for (const city of cities) addOption(s, city.s, cityName(city));
+    s.value = ['tehran', 'mashhad', 'isfahan'][i] in by ? ['tehran', 'mashhad', 'isfahan'][i] : (i ? '' : cities[0].s);
+    s.addEventListener('change', () => {
+      for (const other of selectors) {
+        if (other === s || !s.value || other.value !== s.value) continue;
+        if (other === selectors[0]) s.value = '';
+        else other.value = '';
+      }
+      render();
+    });
+  });
+  for (const t of months) { addOption(from, t, monthLabel(t)); addOption(to, t, monthLabel(t)); }
+  // Start in the archive's broad-coverage window; sparse edge months remain selectable.
+  const broad = months.filter(t => cities.filter(c => by[c.s].byMonth[t]).length >= data.meta.cities / 2);
+  from.value = broad[0] ?? lo; to.value = broad[broad.length - 1] ?? hi;
+  from.addEventListener('change', () => { if (+from.value > +to.value) to.value = from.value; render(); });
+  to.addEventListener('change', () => { if (+to.value < +from.value) from.value = to.value; render(); });
+  month.addEventListener('change', renderTable);
+  $('#chCSV').addEventListener('click', () => {
+    const rows = ['city_slug,month_gregorian,listings,median_source_units_per_m2,p25,p75'];
+    for (const {city} of selected()) {
+      for (const r of city.rows) {
+        const t = dateIndex(r[0]);
+        if (t >= +from.value && t <= +to.value) rows.push([city.s, ...r].join(','));
+      }
+    }
+    const url = URL.createObjectURL(new Blob([rows.join('\r\n') + '\r\n'], {type: 'text/csv;charset=utf-8'}));
+    const a = h('a', {href: url, download: 'divar-city-month-prices.csv'});
+    root.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  render();
+}
+
 // ------------------------------------------------------------------ satellites
 function renderSat() {
   const el = $('#satChart');
@@ -949,25 +1054,24 @@ function renderForecast() {
   const off = D.forecast.official[S.fMethod];
   const offPts = [[lc, lastCbi.cbi]].concat(off.map((v, i) => [lc + i + 1, v]));
   const divar = D.major.filter(r => r.city === 'tehran' && r.n >= 1000).map(r => [r.t, r.p]);
-  const snapshots = D.series.divar_live || [];
-  const divarLive = snapshots.map(r => [r.x ?? r.t, r.p]);
+  const divarLive = (D.series.divar_live || []).map(r => [r.t, r.p]);   // scheduled collector snapshots
   const cbiPts = MONTHS.map(m => [m.t, m.cbi]);
   const kilPts = MONTHS.map(m => [m.t, m.kil]);
-  const lastObservation = divarLive.at(-1)?.[0];
-  const xMax = Math.max(lk + H, Math.ceil(lastObservation || 0));
+  const xMax = lk + H;
   const all = [...MONTHS.map(m => m.cbi), ...MONTHS.map(m => m.kil), ...b80.map(p => p[2]), ...off, ...divarLive.map(p => p[1])].filter(v => v);
   const yMin = S.fScale === 'log' ? 3e6 : 0, yMax = Math.max(...all) * 1.06;
+  const todayT = (1405 - 1395) * 12 + 6;   // Mehr 1405
   [[T.cbi, '#2a78d6'], [T.kilid, '#eb6834'], [T.divar, '#1baf7a']].forEach(([l, c]) => key.appendChild(h('span', {}, [h('i', { style: `background:${c}` }), l])));
   key.appendChild(h('span', { style: 'color:#2a78d6' }, [h('i', { cls: 'dash', style: 'background:#2a78d6' }), h('span', { style: 'color:#52514e', text: `${T.official_path} (${D.forecast.labels[S.fMethod][L]})` })]));
   key.appendChild(h('span', {}, [h('i', { cls: 'box', style: 'background:rgba(235,104,52,.18)' }), `${T.forecast}: ${T.band80}`]));
   key.appendChild(h('span', {}, [h('i', { cls: 'box', style: 'background:rgba(235,104,52,.32)' }), T.band50]));
-  const years = []; for (let t = 0; t <= xMax; t += 12) years.push(t);
+  const years = []; for (let y = 1395; y <= 1406; y++) years.push((y - 1395) * 12);
   lineChart(el, {
     w: 1100, h: 400, m: { l: 58, r: 96, t: 16, b: 34 }, xMin: 0, xMax, yLog: S.fScale === 'log', yMin, yMax,
     yTicks: S.fScale === 'log' ? [5e6, 1e7, 2e7, 5e7, 1e8, 2e8, 5e8].filter(v => v >= yMin && v <= yMax) : null,
     yFmt: v => Mv(v, 0), xTicks: years, xFmt: t => yr(1395 + t / 12),
     bands: [{ color: '#eb6834', opacity: .16, pts: b80 }, { color: '#eb6834', opacity: .22, pts: b50 }],
-    vlines: lastObservation == null ? [] : [{ x: lastObservation, label: FA ? 'آخرین مشاهده' : 'Last observation' }],
+    vlines: [{ x: todayT, label: FA ? 'امروز' : 'today' }],
     hl: { x0: (S.year - 1395) * 12, x1: (S.year - 1395) * 12 + 12, label: pLab(S.year) },
     series: [
       { id: 'cbi', color: '#2a78d6', pts: cbiPts },
@@ -983,15 +1087,10 @@ function renderForecast() {
       if (m && m.cbi) rows.push({ k: T.cbi, v: Mv(m.cbi) + ' ' + T.u_m_short, c: '#2a78d6' });
       if (m && m.cbi && cbiYoY(t) != null) rows.push({ k: FA ? 'تغییر سالانه' : 'year on year', v: spct(cbiYoY(t)) });
       if (m && m.tx) rows.push({ k: FA ? 'تعداد معامله' : 'transactions', v: nf(m.tx) });
-      const dv = divar.find(p => p[0] === t);
-      if (dv) rows.push({k:T.divar, v:Mv(dv[1]) + ' ' + T.u_m_short, c:'#1baf7a'});
-      for (const r of snapshots.filter(r => r.t === t)) {
-        const observed = new Date(r.date + 'T00:00:00Z').toLocaleDateString(LOC, {day:'numeric', month:'short', timeZone:'UTC'});
-        rows.push({k:T.divar + ' · ' + observed, v:Mv(r.p) + ' ' + T.u_m_short, c:'#1baf7a'});
-      }
+      const dv = divar.find(p => p[0] === t) || divarLive.filter(p => p[0] === t).pop(); if (dv) rows.push({ k: T.divar, v: Mv(dv[1]) + ' ' + T.u_m_short, c: '#1baf7a' });
       if (m && m.kil) rows.push({ k: T.kilid, v: Mv(m.kil) + ' ' + T.u_m_short, c: '#eb6834' });
       if (t > lc && t <= lc + 24) rows.push({ k: T.official_path, v: Mv(off[t - lc - 1]) + ' ' + T.u_m_short, c: '#2a78d6' });
-      if (t > lk && t <= lk + H) { const i = t - lk; rows.push({ k: T.forecast, v: Mv(mid(i)) + ' ' + T.u_m_short, c: '#eb6834' }); rows.push({ k: T.band80, v: `${Mv(b80[i][1])}–${Mv(b80[i][2])}` }); }
+      if (t > lk) { const i = t - lk; rows.push({ k: T.forecast, v: Mv(mid(i)) + ' ' + T.u_m_short, c: '#eb6834' }); rows.push({ k: T.band80, v: `${Mv(b80[i][1])}–${Mv(b80[i][2])}` }); }
       if (!rows.length) return null;
       return { title: tLabel(t), rows };
     },
@@ -1159,12 +1258,57 @@ function renderPills() {
   items.forEach(([v, l]) => box.appendChild(h('span', { cls: 'pill' }, [h('b', { text: iso(v) }), ' ' + l])));
 }
 
-// @include market_filters.js
-
-function setYear(year) { chooseGlobalPeriod('y:' + year); }
+// ================================================================== year bar
+let playT = null;
+function renderYearBar() {
+  const yb = clear($('#ybYears')), y = S.year;
+  const has = v => ({ t: MAP_YEARS.includes(v), i: v === 1403, c: !!lastIn(v, 'cbi'), k: !!lastIn(v, 'kil') });
+  YEARS.forEach(v => {
+    const a = has(v);
+    yb.appendChild(h('button', { cls: 'yb-y' + (v === y ? ' on' : '') + (a.t ? ' map' : ''), 'aria-pressed': v === y ? 'true' : 'false', onclick: () => { stopPlay(); setYear(v); } }, [
+      h('b', { text: yr(v) }), h('span', { cls: 'yb-dots' }, ['t', 'i', 'c', 'k'].filter(k => a[k]).map(k => h('i', { cls: 'yb-dot ' + k })))]));
+  });
+  centerYear();
+  const c = lastIn(y, 'cbi'), k = lastIn(y, 'kil');
+  const item = (cls, name, v) => h('span', { cls: 'yb-s' + (v ? '' : ' off') }, [h('i', { cls: 'yb-dot ' + cls }), name + ': ', h('b', { text: v || (FA ? 'ندارد' : 'none') })]);
+  const st = clear($('#ybStatus'));
+  [item('t', FA ? 'نقشه‌ی تهران' : 'Tehran map', MAP_YEARS.includes(y) ? `${pLab(y)} · ${PER[y].src}` : null),
+   item('i', FA ? 'استان‌ها' : 'Provinces', y === 1403 ? pLab(1403) : null),
+   item('c', FA ? 'بانک مرکزی' : 'Central Bank', c ? tLabel(c.t) : null),
+   item('k', FA ? 'کیلید' : 'Kilid', k ? tLabel(k.t) : null)].forEach(e => st.appendChild(e));
+}
+function centerYear() {   // keep the selected year in view when the bar scrolls (phones)
+  const yb = $('#ybYears'), on = yb.querySelector('.on');
+  if (!on || yb.scrollWidth <= yb.clientWidth) return;
+  const a = on.getBoundingClientRect(), b = yb.getBoundingClientRect();
+  yb.scrollLeft += (a.left + a.width / 2) - (b.left + b.width / 2);
+}
+function stopPlay() { if (playT) { clearInterval(playT); playT = null; } $('#ybPlay').textContent = '▶'; $('#ybPlay').setAttribute('aria-pressed', 'false'); }
+function togglePlay() {
+  if (playT) { stopPlay(); return; }
+  let i = YEARS.indexOf(S.year); if (i >= YEARS.length - 1) i = -1;
+  $('#ybPlay').textContent = '❚❚'; $('#ybPlay').setAttribute('aria-pressed', 'true');
+  const step = () => { i++; if (i >= YEARS.length) { stopPlay(); return; } setYear(YEARS[i]); };
+  step(); playT = setInterval(step, 1400);
+}
+function setYear(y) {
+  if (!YEARS.includes(y)) return;
+  S.year = y; S.legendBin = null; iLegendBin = null;
+  if (S.roll) { S.roll = 0; $('#vRoll').value = 0; }
+  renderYearBar(); renderKPIs(); renderTehranMap(); renderTehranSide(); renderRank(); renderCatch();
+  fillHoodSelect($('#vSearch').value); renderRollChips(); renderValuation(); renderIranMap(); renderIranSide(); renderForecast(); renderYoY();
+}
 
 // ================================================================== wiring
 function initControls() {
+  $('#ybPlay').addEventListener('click', togglePlay);
+  $('#ybYears').addEventListener('keydown', ev => {
+    const back = FA ? 'ArrowRight' : 'ArrowLeft', fwd = FA ? 'ArrowLeft' : 'ArrowRight';
+    if (ev.key !== back && ev.key !== fwd) return;
+    ev.preventDefault(); stopPlay();
+    const i = YEARS.indexOf(S.year) + (ev.key === fwd ? 1 : -1);
+    if (i >= 0 && i < YEARS.length) { setYear(YEARS[i]); $('#ybYears .on').focus(); }
+  });
   const tm = $('#tMetric');
   Object.entries(T_METRICS).forEach(([k, m]) => tm.appendChild(h('option', { value: k, text: m.label })));
   tm.addEventListener('change', ev => { S.tMetric = ev.target.value; S.legendBin = null; renderTehranMap(); renderTehranSide(); });
@@ -1194,12 +1338,12 @@ function initControls() {
 }
 
 function boot() {
-  initControls(); initValuation(); renderPills();
+  initControls(); initCityHistory(); initValuation(); renderPills(); renderYearBar();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(centerYear);
+  addEventListener('resize', centerYear);
   renderKPIs(); renderTehranMap(); renderTehranSide(); renderRank(); renderCatch();
   renderValuation(); renderIranMap(); renderIranSide(); renderMajor(); renderSat();
   renderForecast(); renderLeaderboard(); renderYoY(); renderModel(); renderData();
-  initMarketFilters();
-
 }
 boot();
 })();
