@@ -25,14 +25,15 @@ def js_json(obj) -> str:
 
 def main() -> None:
     data = json.loads((ROOT / "data" / "processed" / "dashboard_data.json").read_text(encoding="utf-8"))
-    # These series are distributed as dated CSVs. The map page uses city_monthly.
-    for key in ("observations", "city_rentals", "city_weekly"):
+    # The dated ledger includes the independent rent, deposit and sale series.
+    for key in ("city_rentals", "city_weekly"):
         data.pop(key, None)
     i18n = json.loads((DASH / "i18n.json").read_text(encoding="utf-8"))
     content = json.loads((DASH / "content.json").read_text(encoding="utf-8"))
     template = (DASH / "template.html").read_text(encoding="utf-8")
     css = (DASH / "styles.css").read_text(encoding="utf-8")
     app = (DASH / "app.js").read_text(encoding="utf-8")
+    app = app.replace("// @include observations.js", (DASH / "observations.js").read_text(encoding="utf-8"))
     font = base64.b64encode((DASH / "fonts" / "vazirmatn-variable.woff2").read_bytes()).decode()
     author_img = "data:image/jpeg;base64," + base64.b64encode((DASH / "author.jpg").read_bytes()).decode()
     font_face = ("@font-face{font-family:'Vazirmatn';src:url(data:font/woff2;base64," + font +

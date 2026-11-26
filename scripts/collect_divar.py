@@ -94,7 +94,10 @@ def parse_chips(chips) -> dict:
             if "متر" in title and num:
                 out["size_m2"] = float(num)
             elif "اتاق" in title:
-                out["rooms"] = float(num) if num else 0.0
+                if num:
+                    out["rooms"] = float(num)
+                elif "بدون" in title:
+                    out["rooms"] = 0.0
             elif "نوساز" in title:
                 out["age_years"] = 0.0
             elif "سال" in title and num:
@@ -407,11 +410,13 @@ def aggregate(raw_path: Path, out_dir: Path | None = None, *, require_coverage: 
 
     def summarise(g):
         col = lambda c: pd.to_numeric(g[c], errors="coerce") if c in g else pd.Series(dtype=float)  # noqa: E731
+        rooms = col("rooms").dropna()
         return pd.Series({"listings": len(g), "ppm2": g.price_per_m2_toman.median(),
                           "ppm2_p25": g.price_per_m2_toman.quantile(.25),
                           "ppm2_p75": g.price_per_m2_toman.quantile(.75),
                           "size_median": g.size_m2.median(), "price_median": g.price_toman.median(),
-                          "rooms_median": col("rooms").median(), "build_year": jy - col("age_years").median(),
+                          "rooms_median": rooms.median(), "rooms_reported": len(rooms),
+                          "two_bedroom_listings": int(rooms.eq(2).sum()), "build_year": jy - col("age_years").median(),
                           "parking_share": g.parking.mean(), "elevator_share": g.elevator.mean()})
 
     out.mkdir(parents=True, exist_ok=True)
@@ -448,9 +453,14 @@ def aggregate(raw_path: Path, out_dir: Path | None = None, *, require_coverage: 
             "note": "Asking prices; map-card prices are rounded by Divar (about ±1%)."}
     (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
     # append this collection to the running history (one row per district + Tehran)
-    snap = dtab[["district", "listings", "ppm2", "ppm2_p25", "ppm2_p75"]].rename(columns={"district": "scope"})
+    snap = dtab[["district", "listings", "ppm2", "ppm2_p25", "ppm2_p75", "size_median", "price_median",
+                 "rooms_reported", "two_bedroom_listings"]].rename(columns={
+                     "district": "scope", "size_median": "median_area_m2", "price_median": "median_per_apartment"})
     snap["scope"] = snap["scope"].astype(str)
-    city = pd.DataFrame([{"scope": "tehran", "listings": len(ads), **tehran.to_dict()}])
+    whole = summarise(ads)
+    city = pd.DataFrame([{"scope": "tehran", "listings": len(ads), **tehran.to_dict(),
+                          "median_area_m2": whole.size_median, "median_per_apartment": whole.price_median,
+                          "rooms_reported": whole.rooms_reported, "two_bedroom_listings": whole.two_bedroom_listings}])
     snap = pd.concat([city, snap], ignore_index=True)
     snap.insert(0, "collected_on", collected)
     hist = out / "snapshots.csv"

@@ -8,7 +8,24 @@
 | `data/cities_monthly_rentals.csv` | City, Gregorian month, eligible paired rental listings. The rent and deposit columns each contain the median and 25th/75th percentiles of the whole-apartment amount in source units. |
 | `data/cities_monthly_*.json` | Source revision, input hashes, coverage, filters, units and period for each archive. |
 | `data/geo/divar_weekly_city_panel.csv` | Fixed Divar city and neighbourhood IDs, slug and viewport bounds, selected from Divar’s public city directories on 26 November 2026. |
-| `data/raw/divar_weekly/city_snapshots.csv` | One accepted observation per city and Saturday-start week, local collection date, usable distinct ads, median and quartiles in toman per m², neighbourhood count, and panel fingerprint. |
+| `data/raw/divar_weekly/city_snapshots.csv` | One accepted observation per city and collection date, Saturday-start week, usable distinct ads, median and quartiles in toman per m², neighbourhood count, and panel fingerprint. |
+| `data/raw/divar_weekly/rental_snapshots.csv` | Accepted city/day observations for rent and deposit, independently sampled from eligible map cards for each amount, in toman. |
+| `data/market_archive/{sale,rent,deposit}.csv` | Monthly city, province and Tehran district summaries from the pinned archive, including pooled province medians. |
+| `data/processed/market_{sale,rent,deposit}.csv` | Chart-ready ledger for each market, with source, geographic level, inclusive observation dates, units, sample size, quartiles and supplementary fields. |
+
+### Supplementary fields
+
+| Field | Meaning |
+|---|---|
+| `median_area_m2` | Median floor area of the eligible listings, in square metres. |
+| `median_per_apartment` | Median asking amount for the whole apartment. For weekly city sale cards without a quoted total, the total is calculated from that card’s area and per-m² quote before aggregation. |
+| `median_per_m2` | Median asking amount per square metre. The independent city panels and archive calculate each listing’s amount per m² before aggregation. The Tehran district survey retains its published listing-weighted neighbourhood benchmark. |
+| `rooms_reported` | Eligible listings with a known room count. A blank means that the source did not publish this count. |
+| `two_bedroom_listings` | Two-bedroom listings within `rooms_reported`. Their share uses that denominator and is omitted when the denominator is missing or zero. |
+| `areas_covered` | Contributing cities for an archive province, surveyed neighbourhoods for a city panel, or covered districts for a Tehran-wide survey. |
+
+Amounts retain the currency family indicated by `unit`. Weekly observations use toman. The archive retains its undocumented currency. Older Tehran district profiles are matched to the same collection date, district, sample count and original benchmark in the published district files. Fields absent from a historical source remain blank. The quality ledger excludes partial surveys from the dashboard.
+
 
 ## Raw (`data/raw/`, committed, re-downloadable with `scripts/fetch_sources.py`)
 

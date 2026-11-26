@@ -12,7 +12,7 @@ import collect_city_weekly as weekly
 
 OUT = weekly.OUT.with_name("rental_snapshots.csv")
 FIELDS = ["market", "city", "date", "week", "listings", "median_toman", "p25_toman", "p75_toman",
-          "neighbourhoods", "panel_id"]
+          "neighbourhoods", "panel_id"] + weekly.PROFILE_FIELDS
 CITIES = {"tehran": "تهران", **weekly.CITIES}
 LABELS = {"اجاره": "rent", "ودیعه": "deposit"}
 
@@ -21,7 +21,8 @@ def rental_card(post):
     card = post.get("map_post_card") or {}
     if not card.get("token"):
         return None
-    row = {"token": card["token"], "size_m2": weekly.divar.parse_chips(card.get("chips"))["size_m2"],
+    chips = weekly.divar.parse_chips(card.get("chips"))
+    row = {"token": card["token"], "size_m2": chips["size_m2"], "rooms": chips["rooms"],
            "rent": None, "deposit": None}
     for field in card.get("price_fields") or []:
         label = (field.get("title") or "").strip(" :")
@@ -44,15 +45,16 @@ def rental_panels():
 
 def summarize(market, city, day, rows, areas, previous):
     panel_id = weekly.panel_signature(city, areas, previous)
-    values = pd.Series([r[market] for r in rows if r.get(market) and r[market] > 0
-                        and 20 <= (r["size_m2"] or 0) <= 1000], dtype="float64")
+    eligible = [r for r in rows if r.get(market) and r[market] > 0 and 20 <= (r["size_m2"] or 0) <= 1000]
+    values = pd.Series([r[market] for r in eligible], dtype="float64")
     floor = max(50, .5 * int(previous["listings"]) if previous else 0)
     if len(values) < floor:
         raise weekly.divar.IncompleteCollection(f"only {len(values)} usable {market} amounts")
     week = day - timedelta(days=(day.weekday() + 2) % 7)
-    return dict(zip(FIELDS, (market, city, day.isoformat(), week.isoformat(), len(values),
+    result = dict(zip(FIELDS, (market, city, day.isoformat(), week.isoformat(), len(values),
                             round(values.median()), round(values.quantile(.25)), round(values.quantile(.75)),
                             len(areas), panel_id)))
+    return {**result, **weekly.sample_profile(eligible, market)}
 
 
 def refresh(cities, out=OUT, day=None, collect=weekly.gather, minutes=8):

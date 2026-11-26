@@ -22,12 +22,13 @@ import pandas as pd
 import collect_divar as divar
 
 from iran_housing.market import WEEKLY_CITIES as CITIES
+from iran_housing.observations import PROFILE_FIELDS
 CITY_URL = "https://api.divar.ir/v8/places/cities"
 PANEL = divar.ROOT / "data" / "geo" / "divar_weekly_city_panel.csv"
 OUT = divar.ROOT / "data" / "raw" / "divar_weekly" / "city_snapshots.csv"
 PANEL_FIELDS = ["city", "city_id", "district_id", "slug", "min_lon", "min_lat", "max_lon", "max_lat"]
 HEADER = ["city", "date", "week", "listings", "median_toman_m2", "p25_toman_m2", "p75_toman_m2",
-          "neighbourhoods", "panel_id"]
+          "neighbourhoods", "panel_id"] + PROFILE_FIELDS
 BANDS, PER_BAND = 6, 8
 
 
@@ -81,7 +82,8 @@ def build_panel(path):
 def load_rows(path, fields):
     with path.open(encoding="utf-8", newline="") as source:
         reader = csv.DictReader(source)
-        if reader.fieldnames != fields:
+        original = fields[:-len(PROFILE_FIELDS)] if fields[-len(PROFILE_FIELDS):] == PROFILE_FIELDS else fields
+        if reader.fieldnames not in (fields, original):
             raise ValueError(f"Unexpected columns in {path.name}")
         return list(reader)
 
@@ -129,6 +131,21 @@ def panel_signature(city, districts, previous):
     return panel_id
 
 
+def sample_profile(eligible, market):
+    """Compute each measure on individual accepted cards before taking its median."""
+    size = pd.Series([r["size_m2"] for r in eligible], dtype="float64")
+    rooms = pd.to_numeric(pd.Series([r.get("rooms") for r in eligible]), errors="coerce").dropna()
+    if market == "sale":
+        per_m2 = pd.Series([r["price_per_m2_toman"] for r in eligible])
+        quoted = pd.Series([r.get("price_toman") for r in eligible], dtype="float64")
+        total = quoted.where(quoted.gt(0), per_m2 * size)
+    else:
+        total = pd.Series([r[market] for r in eligible])
+        per_m2 = total / size
+    return dict(zip(PROFILE_FIELDS, (round(size.median(), 1), round(total.median()), round(per_m2.median()),
+                                     len(rooms), int(rooms.eq(2).sum()))))
+
+
 def summarize(city, day, rows, districts, previous):
     panel_id = panel_signature(city, districts, previous)
     size = pd.Series([r.get("size_m2") for r in rows], dtype="float64")
@@ -138,9 +155,10 @@ def summarize(city, day, rows, districts, previous):
     if len(valid) < floor:
         raise divar.IncompleteCollection(f"{len(valid)} usable listings, need at least {math.ceil(floor)}")
     week = day - timedelta(days=(day.weekday() + 2) % 7)
-    return dict(zip(HEADER, (city, day.isoformat(), week.isoformat(), len(valid),
+    result = dict(zip(HEADER, (city, day.isoformat(), week.isoformat(), len(valid),
                              round(valid.median()), round(valid.quantile(.25)), round(valid.quantile(.75)),
                              len(districts), panel_id)))
+    return {**result, **sample_profile([rows[i] for i in valid.index], "sale")}
 
 
 def refresh(cities, out, max_minutes=10, *, panel=PANEL, collect=gather, day=None):
